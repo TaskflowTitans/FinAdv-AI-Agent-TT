@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+*.db  # expenses.db
+venv/
+*.png  # Samples in repo, but large ignore
+.DS_Store
