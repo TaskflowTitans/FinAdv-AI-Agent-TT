@@ -1,8 +1,11 @@
-# FinAI Expense Manager
-Track A: OCR screenshots → Categorize → Guru Advice.
+# Welcome to Financial AI Agent
+### Team :
+Sanjay 
+Heer
+Aditi
+Diya
 
-## Setup
-1. `pip install -r requirements.txt`
-2. `streamlit run app/main.py`
+## Project Initiated✅
 
-## Week 1 Demo: [Link]
+
+## Week 1 

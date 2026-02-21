@@ -1,0 +1,5 @@
+# This are not accurate please check them and update accordingly:
+streamlit==1.38.0
+pytesseract==0.3.13
+pillow==10.4.0
+pandas==2.2.3
