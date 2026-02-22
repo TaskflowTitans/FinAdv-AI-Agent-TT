@@ -10,12 +10,14 @@ Diya<br>
 ## Week 1 
 
 ### QUICK SETUP
-
+<br>
+Create a Folder "financial-ai-agent-vgec" <br>
 1. git clone ...<br>
 2. cd financial-ai-agent-vgec <br>
 3. python -m venv venv <br>
 4. venv/bin/activate <br>
 5. pip install -r requirements.txt <br>
+<br>
 Doing All this Steps will install you the Virtual Environment of our Project in your local. <br>
 
 ### DAY 1
