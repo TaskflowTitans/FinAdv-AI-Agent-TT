@@ -1,55 +1,75 @@
 from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage
+from dotenv import load_dotenv
 import os
-load_dotenv()  # Loads .env automatically
-
-api_key = os.getenv("GEMINI_API_KEY")
-
-# GEMINI API Key is Working!
-
+import cv2
 import pytesseract
 from PIL import Image, ImageEnhance
 import re
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
+import base64
 
-# Fix Windows Tesseract path
+load_dotenv()  # Loads .env automatically
+
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+groq_api_key = os.getenv("GROQ_API_KEY")
+
+# GEMINI API Key is Working!
+
+# This is for Sanjay's Local Tesseract Installation (needed for testing)
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\HELLO\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
 
-def preprocess_image(image):
-    """Clean blurry UPI screenshots"""
-    gray = image.convert('L')
-    enhancer = ImageEnhance.Contrast(gray)
-    return enhancer.enhance(2.0)
+# To Show Image
 
-def extract_expense(image_file):
-    img = preprocess_image(Image.open(image_file))
-    text = pytesseract.image_to_string(img, config='--psm 6')
+# def show_image(img_path):
     
-    # UPI-SPECIFIC: Grab largest comma-formatted amount
-    amounts = re.findall(r'\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b', text)
-    amount = max([float(a.replace(',', '')) for a in amounts]) if amounts else 0
+#     image = cv2.imread(img_path)
     
-    date_match = re.search(r'(\d{1,2}\s+[A-Za-z]+\s+\d{4})', text)
-    desc_match = re.search(r'(?:to|TO)[:\s]+(.{1,30})', text, re.IGNORECASE)
-    
-    date = date_match.group(1) if date_match else 'unknown'
-    description = desc_match.group(1).strip() if desc_match else 'unknown'
-    
-    return {
-        'raw_text': text.strip(),
-        'amount': round(amount, 2),
-        'date': date,
-        'description': description,
-        'confidence': 90
-    }
+#     if image is None:
+#         print("Error: Could not read image. Check the file path.")
+#         return
 
+#     cv2.imshow("Image Window", image)
+    
+#     cv2.waitKey(0)
+    
+#     cv2.destroyAllWindows()
+
+# show_image("payment1.jpg")
+
+
+
+# Initialize Gemini 1.5 Flash (faster and cheaper for OCR tasks)
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=gemini_api_key)
+
+def extract_with_vision(img_path):
+    with open(img_path, "rb") as image_file:
+        image_data = base64.b64encode(image_file.read()).decode("utf-8")
+
+    message = HumanMessage(
+        content=[
+            {
+                "type": "text", 
+                "text": "Extract these details from this UPI screenshot: Amount, Date, Bank Name, and Description. Respond ONLY in JSON."
+            },
+            {
+                "type": "image_url", 
+                "image_url": f"data:image/jpeg;base64,{image_data}"
+            },
+        ]
+    )
+    
+    response = llm.invoke([message])
+    return response.content
+
+# Run the test
 if __name__ == "__main__":
-    print("🧿 OCR Test - Add screenshot to data/samples/")
-    import os
-    test_path = "data/samples/payment2.jpg"
-    
-    # Check if file exists
+    test_path = "data/samples/payment1.jpg"
     if os.path.exists(test_path):
-        result = extract_expense(test_path)
-        print("✅ SUCCESS:", result)
+        result = extract_with_vision(test_path)
+        print("\n--- Extraction Result ---")
+        print(result)
     else:
-        print("❌ File not found:", test_path)
-        print("📁 Create data/samples/ folder and add payment2.jpg")
+        print(f"❌ File not found at: {test_path}")
