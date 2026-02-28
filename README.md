@@ -77,5 +77,5 @@ GROQ_API_KEY = key_here<br>
 
 ### DAY 7
 
-‣ README Updated
-‣ FlowChart Added
+‣ README Updated<br>
+‣ FlowChart Added<br>
