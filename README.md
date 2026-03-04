@@ -106,3 +106,99 @@ GROQ_API_KEY = key_here
 
 ‣ README Updated<br>
 ‣ FlowChart Added<br>
+
+## Week 2
+
+## 🔍 OCR Strategy & Design Decision
+
+### Initial Approach: Tesseract OCR
+
+<br>
+
+As per the project requirement, the initial implementation used:
+
+<br>
+
+‣ Tesseract OCR
+
+<br>
+
+‣ OpenCV preprocessing (grayscale, thresholding, denoising)
+
+<br>
+
+The pipeline was :
+
+<br>
+
+```bash
+Image → Tesseract OCR → Regex Parsing → Structured Data
+```
+
+### Challenges Observed
+
+During testing with real Indian UPI payment screenshots (Google Pay, PhonePe, Paytm), several issues were observed:
+
+<br>
+
+‣ Inconsistent text alignment in screenshots
+
+<br>
+
+‣ Mixed fonts and UI overlays
+
+<br>
+
+‣ Broken line structures
+
+<br>
+
+‣ Poor extraction of ₹ symbol and transaction IDs
+
+<br>
+
+‣ Regular Expression errors
+
+<br>
+
+This resulted in :
+
+<br>
+
+‣ Low extraction accuracy (≈ 50–65%)
+
+<br>
+
+‣ Manual correction requirements
+
+## Improved Approach: Gemini Vision
+
+To improve reliability and accuracy, the OCR-based extraction was replaced with:
+
+<br>
+
+Google Gemini Vision model
+
+<br>
+
+Updated pipeline:
+
+<br>
+
+```bash
+Image → Gemini Vision → Structured JSON Extraction
+```
+
+Instead of relying on raw OCR + regex rules, Gemini Vision performs:
+
+<br>
+
+‣ Context-aware text recognition
+
+<br>
+
+‣ Semantic understanding of financial screenshots
+
+<br>
+
+‣ Direct structured JSON output generation
