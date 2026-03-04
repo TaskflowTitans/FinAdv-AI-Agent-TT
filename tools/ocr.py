@@ -1,5 +1,4 @@
 from urllib import response
-
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
@@ -133,12 +132,12 @@ If a field is missing, use null.
 
     return clean_data
     
-if __name__ == "__main__":
-    test_path = "data/samples/payment2.jpg"
+# if __name__ == "__main__":
+#     test_path = "data/samples/payment2.jpg"
 
-    if os.path.exists(test_path):
-        result = extract_with_gemini_vision(test_path)
-        print("\n===== STRUCTURED OUTPUT =====\n")
-        print(json.dumps(result, indent=4))
-    else:
-        print("❌ File not found")
+#     if os.path.exists(test_path):
+#         result = extract_with_gemini_vision(test_path)
+#         print("\n===== STRUCTURED OUTPUT =====\n")
+#         print(json.dumps(result, indent=4))
+#     else:
+#         print("❌ File not found")
