@@ -171,7 +171,7 @@ This resulted in :
 
 ‣ Manual correction requirements
 
-## Improved Approach: Gemini Vision
+## 🚀Improved Approach: Gemini Vision
 
 To improve reliability and accuracy, the OCR-based extraction was replaced with:
 
