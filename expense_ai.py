@@ -14,34 +14,8 @@ import os
 # 🔹 If using Windows, set correct path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-
 # ==============================
-# 1️⃣ Extract Data From Image
-# ==============================
-
-def extract_receipt_data(image_path):
-    try:
-        print(f"\nProcessing: {image_path}")
-
-        # Open Image
-        image = Image.open(image_path)
-
-        # Extract text using OCR
-        extracted_text = pytesseract.image_to_string(image)
-
-        # Print extracted text
-        print("\n===== EXTRACTED TEXT =====\n")
-        print(extracted_text)
-
-        return extracted_text
-
-    except Exception as e:
-        print("Error:", e)
-        return None
-
-
-# ==============================
-# 2️⃣ Process Images in Folder
+#  Process Images in Folder
 # ==============================
 
 image_folder = "receipts"
@@ -55,7 +29,7 @@ for file in os.listdir(image_folder):
 
      
     #==========================
-    # 2️⃣ Auto Categorization
+    #  Auto Categorization
     # ===========================
 def categorize_expense(text):
     data = {}
@@ -72,7 +46,7 @@ def categorize_expense(text):
 
 
 # ==============================
-# 3️⃣ Convert to JSON
+#  Convert to JSON
 # ==============================
 
 def save_as_json(data):
@@ -82,7 +56,7 @@ def save_as_json(data):
 
 
 # ==============================
-# 4️⃣ Save to CSV (Expense Tracker DB)
+#  Save to CSV (Expense Tracker DB)
 # ==============================
 
 def save_to_csv(data):
@@ -98,7 +72,7 @@ def save_to_csv(data):
 
 
 # ==============================
-# 5️⃣ Run For Multiple Receipts
+#  Run For Multiple Receipts
 # ==============================
 
 import os
@@ -124,4 +98,5 @@ if __name__ == "__main__":
         for file in files:
             print(f"Processing: {file}")
             # Further code likely processes each file
+
  
