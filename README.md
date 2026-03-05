@@ -11,8 +11,8 @@ Diya<br>
 
 <br>
 
-Create a Folder "financial-ai-agent-vgec" in your local<br>
-1. Clone the Repo in your local
+Create a New Folder in your Local<br>
+1. Open that New Folder in VS Code and clone the Repo
 
 <br>
 
@@ -70,8 +70,6 @@ GROQ_API_KEY = key_here
 
 <br>
 
-<br>
-
 ## Week 1 
 
 ### DAY 1
@@ -104,8 +102,8 @@ GROQ_API_KEY = key_here
 
 ### DAY 7
 
-‣ README Updated<br>
-‣ FlowChart Added<br>
+‣ README Updated <br>
+‣ FlowChart Added <br>
 
 ## Week 2
 
@@ -113,23 +111,16 @@ GROQ_API_KEY = key_here
 
 ### Initial Approach: Tesseract OCR
 
-<br>
-
 As per the project requirement, the initial implementation used:
 
 <br>
 
-‣ Tesseract OCR
-
-<br>
-
+‣ Tesseract OCR <br>
 ‣ OpenCV preprocessing (grayscale, thresholding, denoising)
 
 <br>
 
 The pipeline was :
-
-<br>
 
 ```bash
 Image → Tesseract OCR → Regex Parsing → Structured Data
@@ -141,21 +132,13 @@ During testing with real Indian UPI payment screenshots (Google Pay, PhonePe, Pa
 
 <br>
 
-‣ Inconsistent text alignment in screenshots
+‣ Inconsistent text alignment in screenshots <br>
 
-<br>
+‣ Mixed fonts and UI overlays <br>
 
-‣ Mixed fonts and UI overlays
+‣ Broken line structures <br>
 
-<br>
-
-‣ Broken line structures
-
-<br>
-
-‣ Poor extraction of ₹ symbol and transaction IDs
-
-<br>
+‣ Poor extraction of ₹ symbol and transaction IDs <br>
 
 ‣ Regular Expression errors
 
@@ -165,11 +148,9 @@ This resulted in :
 
 <br>
 
-‣ Low extraction accuracy (≈ 50–65%)
+‣ Low extraction accuracy (≈ 50–65%) <br>
 
-<br>
-
-‣ Manual correction requirements
+‣ Manual correction requirements <br>
 
 ## 🚀Improved Approach: Gemini Vision
 
@@ -177,28 +158,18 @@ To improve reliability and accuracy, the OCR-based extraction was replaced with:
 
 <br>
 
-Google Gemini Vision model
-
-<br>
+Google Gemini Vision model <br>
 
 Updated pipeline:
-
-<br>
 
 ```bash
 Image → Gemini Vision → Structured JSON Extraction
 ```
 
-Instead of relying on raw OCR + regex rules, Gemini Vision performs:
+Instead of relying on raw OCR + regex rules, Gemini Vision performs: <br>
 
-<br>
+‣ Context-aware text recognition <br>
 
-‣ Context-aware text recognition
-
-<br>
-
-‣ Semantic understanding of financial screenshots
-
-<br>
+‣ Semantic understanding of financial screenshots <br>
 
 ‣ Direct structured JSON output generation
