@@ -1,11 +1,10 @@
 # Welcome to TitansLedger - Financial AI Agent
-### Team :
-Sanjay<br>
-Heer<br>
-Aditi<br>
-Diya<br>
 
-## Project Initiated✅
+## Project Introduction
+
+TitansLedger – Financial AI Agent is an AI-powered system designed to automatically analyze digital payment receipts and transaction screenshots from platforms such as Google Pay, PhonePe, and Paytm. The system extracts relevant financial information from these images and converts it into structured data that can be used for expense tracking, financial analysis, and automated record keeping.
+
+## Installation
 
 ### QUICK SETUP
 
@@ -69,43 +68,6 @@ GEMINI_API_KEY = key_here
 GROQ_API_KEY = key_here
 
 <br>
-
-## Week 1 
-
-### DAY 1
-
-‣ Project Initiated <br>
-‣ Team Tasks Assigned ✅ <br>
-
-### DAY 2
-
-‣ Git Environment Created <br>
-
-### DAY 3
-
-‣ FlowChart Created
-
-### DAY 4 
-
-‣ Tasks Divided
-
-### DAY 5
-
-‣ Virtual Environment Created <br>
-‣ Requirements.txt Added <br>
-‣ OCR Added <br>
-‣ API KEYS Setup ✅ <br>
-
-### DAY 6
-
-‣ Worked on OCR and Categorization
-
-### DAY 7
-
-‣ README Updated <br>
-‣ FlowChart Added <br>
-
-## Week 2
 
 ## 🔍 OCR Strategy & Design Decision
 
@@ -172,4 +134,18 @@ Instead of relying on raw OCR + regex rules, Gemini Vision performs: <br>
 
 ‣ Semantic understanding of financial screenshots <br>
 
-‣ Direct structured JSON output generation
+‣ Direct structured JSON output generation.
+
+## Tech Stack
+
+‣ Python
+‣ LangChain
+‣ Google Gemini Vision
+‣ Pandas
+
+## Team Members
+
+‣ Aditi <br>
+‣ Diya <br>
+‣ Heer <br>
+‣ Sanjay <br>
