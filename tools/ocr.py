@@ -129,12 +129,12 @@ If a field is missing, use null.
 
     response = llm.invoke([message])
 
-    clean_data = extract_json_from_response(response.content)
+    return extract_json_from_response(response.content)
 
-    return clean_data
-    
+# Test block
+
 # if __name__ == "__main__":
-#     test_path = "data/samples/payment2.jpg"
+#     test_path = "data/samples/payment1.jpg"
 
 #     if os.path.exists(test_path):
 #         result = extract_with_gemini_vision(test_path)
