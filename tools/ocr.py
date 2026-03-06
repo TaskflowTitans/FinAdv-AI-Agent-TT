@@ -20,7 +20,7 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 # GEMINI API Key is Working!
 
 # This is for Sanjay's Local Tesseract Installation (needed for testing)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\HELLO\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # To Show Image
 
@@ -128,12 +128,12 @@ If a field is missing, use null.
 
     response = llm.invoke([message])
 
-    clean_data = extract_json_from_response(response.content)
+    return extract_json_from_response(response.content)
 
-    return clean_data
-    
+# Test block
+
 # if __name__ == "__main__":
-#     test_path = "data/samples/payment2.jpg"
+#     test_path = "data/samples/payment1.jpg"
 
 #     if os.path.exists(test_path):
 #         result = extract_with_gemini_vision(test_path)
