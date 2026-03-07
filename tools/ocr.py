@@ -19,9 +19,11 @@ groq_api_key = os.getenv("GROQ_API_KEY")
 
 # GEMINI API Key is Working!
 
-# Install Tesseract OCR and set path if necessary (Set this path for your System)
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
+if os.name == "nt":
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+else:
+    pytesseract.pytesseract.tesseract_cmd = "tesseract"
+    
 # To Show Image
 
 # def show_image(img_path):
