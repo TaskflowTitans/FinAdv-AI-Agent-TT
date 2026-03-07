@@ -43,7 +43,7 @@ MarkupSafe==3.0.3
 multidict==6.7.1
 narwhals==2.16.0
 numpy==2.4.2
-opencv-python==4.13.0.92
+opencv-python-headless
 orjson==3.11.7
 ormsgpack==1.12.2
 packaging==26.0
@@ -87,3 +87,4 @@ xxhash==3.6.0
 yarl==1.22.0
 
 zstandard==0.25.0
+
