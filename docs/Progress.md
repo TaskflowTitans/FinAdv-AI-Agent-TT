@@ -35,27 +35,36 @@
 
 # WEEK 2
 
-## Day 1
+## DAY 1
 
 ‣ Tried to Optimize OCR <br>
 ‣ Categories Added <br>
 
-## Day 2
+## DAY 2
 
 ‣ Gemini Vision integrated instead of OCR
 
-## Day 3
+## DAY 3
 
 ‣ LangChain Tool Created
 
-## Day 4
+## DAY 4
 
 ‣ App Development Started <br>
 ‣ LangChain Tool intiated as Agent in main.py <br>
 ‣ Agent Tested✅ <br>
 
-## Day 5 
+## DAY 5 
 
 ‣ Figured out Streamlit UI <br>
 ‣ Categories Created <br>
 ‣ Data Stored as JSON and CSV in OUTPUT Successfully✅ <br>
+
+## DAY 6
+
+‣ Work Started on UI (Streamlit) <br>
+‣ Categorization Sorted and Updated <br>
+
+## DAY 7
+
+‣ Streamlit Basic App Deployed which takes user input and gives a dictionary as output <br>

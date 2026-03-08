@@ -134,7 +134,27 @@ Instead of relying on raw OCR + regex rules, Gemini Vision performs: <br>
 
 ‣ Semantic understanding of financial screenshots <br>
 
-‣ Direct structured JSON output generation.
+‣ Direct structured JSON output generation. <br>
+
+## Running the Streamlit App
+
+NOTE: App is still in development, it will output only dictionaries of uploaded payment recipts. <br>
+
+After Cloning the Github Repository and installing the requirements, run the following commands to run the app (make sure you are in FinAdv-AI-Agent-TT folder) : <br>
+
+```bash
+streamlit run .\app\main.py
+```
+
+<br>
+
+## Live Demo (Preffered)
+
+You can also try the deployed version of the app here: <br>
+
+```bash
+https://ai-ledger-tracker.streamlit.app/
+```
 
 ## Tech Stack
 
