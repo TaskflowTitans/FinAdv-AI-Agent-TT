@@ -59,6 +59,10 @@ text = pytesseract.image_to_string(thresh, config=custom_config)
 
 # OCR is not working well for all samples, especially those with complex backgrounds and layouts.
 
+# pytesseract path for local
+# Do not remove this line, as it is necessary for pytesseract to work on Windows. Update the path if tesseract is installed elsewhere on your system. just comment it if you have a different path.
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Update this path if tesseract is installed elsewhere
+
 # With GEMINI Vision Method
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=gemini_api_key)
@@ -131,6 +135,12 @@ If a field is missing, use null.
     response = llm.invoke([message])
 
     return extract_json_from_response(response.content)
+
+result = extract_with_gemini_vision("data/samples/payment6.png")
+
+# Print the result to test
+print("\n===== EXTRACTION RESULT =====")
+print(json.dumps(result, indent=4))
 
 # Test block
 
