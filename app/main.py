@@ -1,13 +1,15 @@
 import sys
 import os
+
+# allow importing from project root
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import tempfile
 import json
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-
-# allow importing from project root
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from database.db import init_db, insert_transaction, get_all_transactions
 
 from tools.langchain_tool import ocr_extraction_tool
 from data.categories import categorize
@@ -21,6 +23,8 @@ st.set_page_config(
     page_icon="💰",
     layout="wide"
 )
+
+init_db()
 
 # CUSTOM CSS FOR MODERN ATTRACTIVE LOOK (Reference: Modern AI Apps)
 st.markdown("""
@@ -148,10 +152,6 @@ uploaded_file = st.sidebar.file_uploader(
     type=["png", "jpg", "jpeg"]
 )
 
-# store transactions
-if "transactions" not in st.session_state:
-    st.session_state.transactions = []
-
 # ----------------- IMAGE PREVIEW -----------------
 
 if uploaded_file is not None:
@@ -182,23 +182,22 @@ if uploaded_file is not None:
             description = result.get("description", "")
             result["category"] = categorize(description)
 
-            st.session_state.transactions.append(result)
+            insert_transaction(result)  
 
             st.success("Transaction added successfully!")
 
             st.subheader("Extracted Data")
             st.json(result)
 
-# ----------------- DASHBOARD -----------------
+# ----------------- DASHBOARD WITH DB-----------------
 
-if st.session_state.transactions:
+df = get_all_transactions()
 
-    df = pd.DataFrame(st.session_state.transactions)
+if not df.empty:
 
     st.markdown("<br><hr><br>", unsafe_allow_html=True)
     st.header("📊 Expense Dashboard")
 
-    # METRICS
     total_spent = df["amount"].sum()
 
     col1, col2 = st.columns(2)
@@ -215,7 +214,7 @@ if st.session_state.transactions:
     st.subheader("📋 Transaction History")
     st.dataframe(df, width='stretch')
 
-    # convert dataframe to csv
+    # DOWNLOAD
     csv = df.to_csv(index=False).encode('utf-8')
 
     st.download_button(
@@ -224,38 +223,21 @@ if st.session_state.transactions:
         file_name="transactions.csv",
         mime="text/csv"
     )
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # CATEGORY ANALYSIS
-    if "amount" in df.columns:
+    # CATEGORY CHART
+    category_chart = df.groupby("category")["amount"].sum()
 
-        category_chart = df.groupby("category")["amount"].sum()
+    col1, col2 = st.columns(2)
 
-        col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("📊 Expense by Category")
+        st.bar_chart(category_chart)
 
-        with col1:
-            st.subheader("📊 Expense by Category")
-            st.bar_chart(category_chart)
-
-        with col2:
-            st.subheader("🥧 Expense Distribution")
-            fig, ax = plt.subplots(figsize=(6, 6))
-            
-            # Make the matplotlib background 100% transparent to blend with the CSS layout
-            fig.patch.set_alpha(0.0)
-            ax.patch.set_alpha(0.0)
-            
-            colors = plt.cm.Set3.colors
-            category_chart.plot.pie(
-                autopct="%1.1f%%", 
-                ax=ax, 
-                textprops={'color': "w", 'weight': 'bold'},
-                colors=colors,
-                startangle=90,
-                wedgeprops={'edgecolor': (1.0, 1.0, 1.0, 0.05), 'linewidth': 1}
-            )
-            ax.set_ylabel('') # Clean up visual clutter
-            st.pyplot(fig)
+    with col2:
+        st.subheader("🥧 Expense Distribution")
+        fig, ax = plt.subplots()
+        category_chart.plot.pie(autopct="%1.1f%%", ax=ax)
+        st.pyplot(fig)
 
     # ----------------- AI ADVICE SECTION -----------------
     st.markdown("<br><hr><br>", unsafe_allow_html=True)
@@ -281,3 +263,10 @@ if st.session_state.transactions:
     except Exception as e:
         # Fallback if there's an issue with the data grouping
         st.info("Add more transactions to get personalized AI financial insights!")
+
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+if st.button("🗑 Clear All Data"):
+    from database.db import delete_all
+    delete_all()
+    st.success("All data deleted!")
