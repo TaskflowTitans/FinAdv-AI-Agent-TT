@@ -153,7 +153,7 @@ streamlit run .\app\main.py
 You can also try the deployed version of the app here: <br>
 
 ```bash
-https://ai-ledger-tracker.streamlit.app/
+https://titansledger.streamlit.app/
 ```
 
 ## Tech Stack
