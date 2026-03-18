@@ -24,6 +24,31 @@ CATEGORIES = {
         "payment to", "upi", "transfer", "sent to"
     ],
 
+    "Finance & Bills": [
+        "bill","recharge","electricity", "water", "gas", "phone", "internet",
+        "insurance", "loan", "credit card", "debit card","broadband","jio","airtel","vodafone","bsnl","dish tv","tatasky","postpaid","prepaid"
+    ],
+
+    "Shopping & E-commerce": [
+        "amazon", "flipkart", "myntra", "ajio", "snap","nykaa","meesho","delivery","courier","bluedart"
+        ],
+
+    "Government": [
+        "income tax","challan","digilocker","passport","aadhar"
+    ],
+
+    "Investment": [
+        "zerodha","groww","upstox","mutual fund","stock","crypto"
+    ],
+
+    "Travel & Stay": [
+        "makemytrip","goibibo","hotel","airbnb","indigo","flight","where is my train","paytm","bookmyshow","booking","visa","homestay"
+    ],
+
+    "Housing & Utilities": [
+        "rent","maintenance","maid","cook","urban company","plumber","capenter","urban clap","society"
+    ],
+
     "uncategorized": []
 }
 
