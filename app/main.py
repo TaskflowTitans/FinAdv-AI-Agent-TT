@@ -27,6 +27,7 @@ st.set_page_config(
 init_db()
 
 # CUSTOM CSS FOR MODERN ATTRACTIVE LOOK (Reference: Modern AI Apps)
+
 st.markdown("""
 <style>
 /* Main background gradient */
@@ -146,6 +147,7 @@ st.title("💰 AI Expense Tracker")
 st.caption("Upload receipts and automatically track your spending")
 
 # SIDEBAR
+
 st.sidebar.header("Upload Receipt")
 uploaded_file = st.sidebar.file_uploader(
     "Upload Receipt Image",
