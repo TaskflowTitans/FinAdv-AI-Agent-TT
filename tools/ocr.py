@@ -38,20 +38,20 @@ else:
 
 # With OCR
 
-image_path = "data/samples/payment6.png"
-image = cv2.imread(image_path)
+# image_path = "data/samples/payment6.png"
+# image = cv2.imread(image_path)
 
-image = cv2.resize(image, None, fx=1.5, fy=1.5)
+# image = cv2.resize(image, None, fx=1.5, fy=1.5)
 
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-gray = cv2.bilateralFilter(gray, 9, 75, 75)
+# gray = cv2.bilateralFilter(gray, 9, 75, 75)
 
-_, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+# _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
 
-custom_config = r'--oem 3 --psm 6'
+# custom_config = r'--oem 3 --psm 6'
 
-text = pytesseract.image_to_string(thresh, config=custom_config)
+# text = pytesseract.image_to_string(thresh, config=custom_config)
 
 # print("\n===== RAW OCR TEXT =====\n")
 # print(text)
