@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 from database.db import init_db, insert_transaction, get_all_transactions
+from tools.financial_advisor import generate_financial_advice
 
 from tools.langchain_tool import ocr_extraction_tool
 from data.categories import categorize
@@ -19,7 +20,7 @@ plt.style.use('dark_background')
 
 # PAGE CONFIG
 st.set_page_config(
-    page_title="AI Expense Tracker",
+    page_title="TitansLedger - Ultimate AI Expense Tracker",
     page_icon="💰",
     layout="wide"
 )
@@ -143,40 +144,42 @@ hr {
 </style>
 """, unsafe_allow_html=True)
 
-st.title("💰 AI Expense Tracker")
+st.title("💰TitansLedger - AI Expense Tracker")
 st.caption("Upload receipts and automatically track your spending")
 
-# SIDEBAR
+# Without Sidebar
 
-st.sidebar.header("Upload Receipt")
-uploaded_file = st.sidebar.file_uploader(
-    "Upload Receipt Image",
-    type=["png", "jpg", "jpeg"]
+# ----------------- MAIN UPLOAD SECTION -----------------
+
+st.markdown("### 📥 Upload Receipt")
+
+uploaded_file = st.file_uploader(
+    "Drag and drop or click to upload a receipt (PNG, JPG, JPEG)",
+    type=["png", "jpg", "jpeg"],
+    label_visibility="collapsed" # Hides the redundant label for a cleaner look
 )
 
-# ----------------- IMAGE PREVIEW -----------------
+# ----------------- IMAGE PREVIEW & EXTRACTION -----------------
 
 if uploaded_file is not None:
-
-    col1, col2 = st.columns([1, 1])
+    # Small side preview for the image (col1) and data actions (col2)
+    col1, col2 = st.columns([1, 3])
 
     with col1:
-        st.subheader("Receipt Preview")
-        st.image(uploaded_file, width='stretch')
+        st.markdown("##### 🖼️ Preview")
+        st.image(uploaded_file, use_container_width=True)
 
     with col2:
-        st.write("") # Adjust spacing
+        st.markdown("##### ⚙️ Actions")
+        
+        # Action 1: Extract Data
         if st.button("🔍 Extract Transaction"):
-
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
                 tmp.write(uploaded_file.getbuffer())
                 temp_path = tmp.name
 
-            with st.spinner("Extracting transaction details..."):
-
-                result = ocr_extraction_tool.invoke({
-                    "image_path": temp_path
-                })
+            with st.spinner("Processing with AI..."):
+                result = ocr_extraction_tool.invoke({"image_path": temp_path})
 
             if isinstance(result, str):
                 result = json.loads(result)
@@ -185,23 +188,29 @@ if uploaded_file is not None:
             result["category"] = categorize(description)
 
             insert_transaction(result)  
-
             st.success("Transaction added successfully!")
+            
+            with st.expander("View Extracted JSON Data", expanded=True):
+                st.json(result)
 
-            st.subheader("Extracted Data")
-            st.json(result)
+        # Action 2: Clear Data (Now only appears when a file is uploaded)
+        st.markdown("---") 
+        if st.button("🗑️ Clear All Data",type="primary", help="This will wipe the entire database"):
+            from database.db import delete_all
+            delete_all()
+            st.success("All data deleted!")
+            st.rerun() # Refresh the app to clear the dashboard charts
 
-# ----------------- DASHBOARD WITH DB-----------------
+# ----------------- DASHBOARD WITH DB -----------------
 
 df = get_all_transactions()
 
 if not df.empty:
-
+    # --- THIS SECTION SHOWS AS SOON AS THERE IS 1+ TRANSACTION ---
     st.markdown("<br><hr><br>", unsafe_allow_html=True)
     st.header("📊 Expense Dashboard")
 
     total_spent = df["amount"].sum()
-
     col1, col2 = st.columns(2)
 
     with col1:
@@ -212,63 +221,53 @@ if not df.empty:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # TABLE
+    # TABLE - Always show the history if data exists
     st.subheader("📋 Transaction History")
-    st.dataframe(df, width='stretch')
+    st.dataframe(df, use_container_width=True)
 
-    # DOWNLOAD
-    csv = df.to_csv(index=False).encode('utf-8')
+    # --- CONDITIONAL CHART LOGIC ---
+    # Only show charts if there are at least 2 transactions 
+    # This prevents a "boring" pie chart with only one 100% slice.
+    if len(df) > 1:
+        st.markdown("---")
+        category_chart = df.groupby("category")["amount"].sum()
 
-    st.download_button(
-        label="⬇ Download Transactions as CSV",
-        data=csv,
-        file_name="transactions.csv",
-        mime="text/csv"
-    )
+        col_a, col_b = st.columns(2)
 
-    # CATEGORY CHART
-    category_chart = df.groupby("category")["amount"].sum()
+        with col_a:
+            st.subheader("📊 Expense by Category")
+            st.bar_chart(category_chart)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("📊 Expense by Category")
-        st.bar_chart(category_chart)
-
-    with col2:
-        st.subheader("🥧 Expense Distribution")
-        fig, ax = plt.subplots()
-        category_chart.plot.pie(autopct="%1.1f%%", ax=ax)
-        st.pyplot(fig)
-
-    # ----------------- AI ADVICE SECTION -----------------
-    st.markdown("<br><hr><br>", unsafe_allow_html=True)
-    st.header("💡 AI Financial Insights")
+        with col_b:
+            st.subheader("🥧 Expense Distribution")
+            fig, ax = plt.subplots()
+            category_chart.plot.pie(autopct="%1.1f%%", ax=ax, startangle=90)
+            ax.set_ylabel("") 
+            st.pyplot(fig)
     
-    # Calculate highest expense category dynamically
-    try:
-        highest_category = df.groupby("category")["amount"].sum().idxmax()
-        highest_amount = df.groupby("category")["amount"].sum().max()
-        
-        advice_html = f"""
-        <div class="advice-box">
-            <h4>🧠 Smart Recommendations</h4>
-            <ul>
-                <li>Your highest expense category is <strong>{highest_category}</strong> at <strong>₹ {highest_amount:,.2f}</strong>. Consider reviewing these expenses to see if you can cut back.</li>
-                <li><strong>Rule of 50/30/20:</strong> Try to keep your Needs to 50%, Wants to 30%, and Savings to 20% of your income.</li>
-                <li><strong>Pro Tip:</strong> Wait 24 hours before making non-essential purchases to avoid impulse buying.</li>
-            </ul>
-        </div>
-        """
-        st.markdown(advice_html, unsafe_allow_html=True)
-        
-    except Exception as e:
-        # Fallback if there's an issue with the data grouping
-        st.info("Add more transactions to get personalized AI financial insights!")
+     # ----------------- AI ADVICE SECTION -----------------
+    st.markdown("<br><hr><br>", unsafe_allow_html=True)
+st.header("💡 AI Financial Insights")
 
-st.markdown("<br><br>", unsafe_allow_html=True)
+try:
+    with st.spinner("Analyzing your spending with AI..."):
+        # Optional: limit data (important for performance)
+        df_sample = df.tail(50)
 
-if st.button("🗑 Clear All Data"):
-    from database.db import delete_all
-    delete_all()
-    st.success("All data deleted!")
+        advice = generate_financial_advice(df_sample)
+
+    st.markdown(f"""
+    <div class="advice-box">
+        <h4>🧠 Smart AI Insights</h4>
+        <p>{advice}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+except Exception as e:
+    st.error("Error generating AI insights")
+    st.exception(e)
+
+else:
+    # --- THIS ONLY SHOWS THE VERY FIRST TIME (OR AFTER CLEARING DATA) ---
+    st.info("👋 Welcome! Upload your first receipt above to start tracking your expenses.")
+    st.markdown("<br><br>", unsafe_allow_html=True)

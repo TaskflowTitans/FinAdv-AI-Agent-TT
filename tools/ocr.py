@@ -1,7 +1,6 @@
 from urllib import response
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
-from dotenv import load_dotenv
 import os
 import cv2
 import pytesseract
@@ -136,11 +135,11 @@ If a field is missing, use null.
 
     return extract_json_from_response(response.content)
 
-result = extract_with_gemini_vision("data/samples/payment6.png")
+# result = extract_with_gemini_vision("data/samples/payment6.png")
 
 # Print the result to test
-print("\n===== EXTRACTION RESULT =====")
-print(json.dumps(result, indent=4))
+# print("\n===== EXTRACTION RESULT =====")
+# print(json.dumps(result, indent=4))
 
 # Test block
 

@@ -60,9 +60,10 @@ Doing All this Steps will install you the Virtual Environment of our Project in 
 
 #### Integrate API Keys in your Local
 
-Create a .env file in \FINADV-AI-Agent-TT\ folder which stores the Gemini and Groq API Keys as:
+Create a .env file in \FINADV-AI-Agent-TT\ folder which stores the Gemini and OpenAI API Keys as:
 <br>
 GEMINI_API_KEY = key_here
+OPENAI_API_KEY = key_here
 
 <br>
 
