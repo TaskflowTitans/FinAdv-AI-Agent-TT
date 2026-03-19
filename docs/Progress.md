@@ -68,3 +68,27 @@
 ## DAY 7
 
 ‣ Streamlit Basic App Deployed which takes user input and gives a dictionary as output <br>
+
+# WEEK 3
+
+‣ Worked on existing code and fixed errors
+
+# WEEK 4
+
+## DAY 1
+
+‣ More Categories Added
+
+## DAY 2
+
+‣ Database Added 
+‣ Database Integrated with UI
+
+## DAY 3
+
+‣ UI Updated for Mobile Devices
+
+## DAY 4
+
+‣ AI Insights added for uploaded recipt
+‣ Agent now can give powerful advice to User
