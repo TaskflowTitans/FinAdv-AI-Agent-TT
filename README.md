@@ -62,7 +62,7 @@ Doing All this Steps will install you the Virtual Environment of our Project in 
 
 Create a .env file in \FINADV-AI-Agent-TT\ folder which stores the Gemini and OpenAI API Keys as:
 <br>
-GEMINI_API_KEY = key_here
+GEMINI_API_KEY = key_here <br>
 OPENAI_API_KEY = key_here
 
 <br>
