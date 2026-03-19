@@ -2,7 +2,7 @@ from urllib import response
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 import os
-import cv2
+# import cv2
 import pytesseract
 from PIL import Image, ImageEnhance
 import re
