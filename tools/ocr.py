@@ -9,7 +9,9 @@ import re
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 import base64
-import json
+import json 
+from tenacity import retry, stop_after_attempt, wait_exponential
+from langchain_groq import ChatGroq
 
 load_dotenv()
 
@@ -65,6 +67,15 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 # With GEMINI Vision Method
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=gemini_api_key)
+
+fallback_llm = ChatGroq(
+    model="llama3-70b-8192",
+    api_key=groq_api_key
+)
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
+def call_gemini(message):
+    return llm.invoke([message])
 
 from langchain_core.messages import HumanMessage
 
@@ -131,7 +142,27 @@ If a field is missing, use null.
         ]
     )
 
-    response = llm.invoke([message])
+    # response = llm.invoke([message])
+
+    try:
+        response = call_gemini(message)
+        return extract_json_from_response(response.content)
+
+    except Exception as e:
+        print("⚠ Gemini failed, switching to fallback...", e)
+
+        try:
+            fallback_prompt = f"""
+            Extract transaction data and return JSON only.
+
+            (Fallback mode)
+            """
+            response = fallback_llm.invoke(fallback_prompt)
+            return extract_json_from_response(response.content)
+
+        except Exception as e2:
+            print("❌ Fallback failed:", e2)
+            return None
 
     return extract_json_from_response(response.content)
 

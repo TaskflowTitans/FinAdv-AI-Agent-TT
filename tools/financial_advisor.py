@@ -1,5 +1,7 @@
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 import os
 load_dotenv()
@@ -11,6 +13,15 @@ llm = ChatOpenAI(
     model="gpt-5-nano",
     temperature=0.3
 )
+
+fallback_llm = ChatGroq(
+    model="llama3-8b-8192",
+    api_key=os.getenv("GROQ_API_KEY")
+)
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=8))
+def call_primary_llm(prompt):
+    return llm.invoke(prompt)
 
 def generate_financial_advice(df):
     if df.empty:
@@ -33,5 +44,17 @@ def generate_financial_advice(df):
     Output in bullet points.
     """
 
-    response = llm.invoke(prompt)
-    return response.content
+    # response = llm.invoke(prompt)
+    # return response.content
+    try:
+        response = call_primary_llm(prompt)
+        return response.content
+
+    except Exception as e:
+        print("⚠ Primary LLM failed, using fallback...", e)
+
+        try:
+            response = fallback_llm.invoke(prompt)
+            return response.content
+        except:
+            return "⚠ Unable to generate advice right now. Try again later."
