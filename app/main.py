@@ -181,8 +181,18 @@ if uploaded_file is not None:
             with st.spinner("Processing with AI..."):
                 result = ocr_extraction_tool.invoke({"image_path": temp_path})
 
+            # if isinstance(result, str):
+            #     result = json.loads(result)
             if isinstance(result, str):
-                result = json.loads(result)
+                try:
+                    result = json.loads(result)
+                except:
+                    st.error("Invalid response from OCR")
+                    st.stop()
+
+            if "error" in result:
+                st.error("OCR Extraction Failed. Try another image.")
+                st.stop()
 
             description = result.get("description", "")
             result["category"] = categorize(description)
