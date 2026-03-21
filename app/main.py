@@ -11,6 +11,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from database.db import init_db, insert_transaction, get_all_transactions
 from tools.financial_advisor import generate_financial_advice
+import plotly.express as px
 
 from tools.langchain_tool import ocr_extraction_tool
 from data.categories import categorize
@@ -141,10 +142,56 @@ hr {
 .advice-box li {
     margin-bottom: 8px;
 }
+            
+@keyframes shine {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+.titans-title {
+    cursor: default;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 6vw;
+    text-transform: uppercase;
+
+    background: linear-gradient(to right,
+        #434343 0%,
+        #ffffff 50%,
+        #434343 100%);
+    
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    animation: shine 5s linear infinite;
+    text-shadow: 0 0 30px rgba(255,255,255,0.2);
+    font-size: clamp(40px, 6vw, 100px);
+
+    filter: drop-shadow(0px 15px 30px rgba(0, 0, 0, 0.5));
+    letter-spacing: -0.05em;
+}
+
+.titans-title:hover {
+    letter-spacing: 0.02em;
+    transition: 0.3s ease;
+}
 </style>
+
 """, unsafe_allow_html=True)
 
-st.title("💰TitansLedger - AI Expense Tracker")
+# st.title("💰TitansLedger - AI Expense Tracker")
+st.markdown("""
+<div class="titans-title">
+    TitansLedger
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown(
+    "<p style='text-align:center; color:#94A3B8;'>AI Expense Tracker</p>",
+    unsafe_allow_html=True
+)
 st.caption("Upload receipts and automatically track your spending")
 
 # Without Sidebar
@@ -215,6 +262,22 @@ if uploaded_file is not None:
 
 df = get_all_transactions()
 
+# ----------------- DATE FILTER -----------------
+st.markdown("### 📅 Filter Data")
+
+date_range = st.selectbox(
+    "Select Time Range",
+    ["All Time", "Last 7 Days", "Last 30 Days"]
+)
+
+if not df.empty:
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+
+    if date_range == "Last 7 Days":
+        df = df[df["date"] >= pd.Timestamp.now() - pd.Timedelta(days=7)]
+    elif date_range == "Last 30 Days":
+        df = df[df["date"] >= pd.Timestamp.now() - pd.Timedelta(days=30)]
+
 if not df.empty:
     # --- THIS SECTION SHOWS AS SOON AS THERE IS 1+ TRANSACTION ---
     st.markdown("<br><hr><br>", unsafe_allow_html=True)
@@ -223,40 +286,124 @@ if not df.empty:
     total_spent = df["amount"].sum()
     col1, col2 = st.columns(2)
 
+    # with col1:
+    #     st.metric("Total Spending", f"₹ {total_spent:,.2f}")
+
+    # with col2:
+    #     st.metric("Transactions", len(df))
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    avg_spend = df["amount"].mean()
+    top_category = df.groupby("category")["amount"].sum().idxmax()
+    highest_txn = df["amount"].max()
+
     with col1:
-        st.metric("Total Spending", f"₹ {total_spent:,.2f}")
+        st.metric("💰 Total", f"₹ {total_spent:,.2f}")
 
     with col2:
-        st.metric("Transactions", len(df))
+        st.metric("📅 Avg Spend", f"₹ {avg_spend:,.2f}")
+
+    with col3:
+        st.metric("🏆 Top Category", top_category)
+
+    with col4:
+        st.metric("⚠️ Highest", f"₹ {highest_txn:,.2f}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # TABLE - Always show the history if data exists
     st.subheader("📋 Transaction History")
-    st.dataframe(df, use_container_width=True)
+    # st.dataframe(df, use_container_width=True)
+    st.dataframe(
+    df.sort_values(by="amount", ascending=False),
+    use_container_width=True
+    )
 
     # --- CONDITIONAL CHART LOGIC ---
     # Only show charts if there are at least 2 transactions 
     # This prevents a "boring" pie chart with only one 100% slice.
     if len(df) > 1:
         st.markdown("---")
-        category_chart = df.groupby("category")["amount"].sum()
+        # category_chart = df.groupby("category")["amount"].sum()
+
+        # col_a, col_b = st.columns(2)
+
+        # with col_a:
+        #     st.subheader("📊 Expense by Category")
+        #     st.bar_chart(category_chart)
+
+        # with col_b:
+        #     st.subheader("🥧 Expense Distribution")
+        #     fig, ax = plt.subplots()
+        #     category_chart.plot.pie(autopct="%1.1f%%", ax=ax, startangle=90)
+        #     ax.set_ylabel("") 
+        #     st.pyplot(fig)
+
+        category_chart = df.groupby("category")["amount"].sum().reset_index()
 
         col_a, col_b = st.columns(2)
 
         with col_a:
-            st.subheader("📊 Expense by Category")
-            st.bar_chart(category_chart)
+            fig_bar = px.bar(
+                category_chart,
+                x="category",
+                y="amount",
+                title="💸 Spending by Category"
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
 
         with col_b:
-            st.subheader("🥧 Expense Distribution")
-            fig, ax = plt.subplots()
-            category_chart.plot.pie(autopct="%1.1f%%", ax=ax, startangle=90)
-            ax.set_ylabel("") 
-            st.pyplot(fig)
+            fig_pie = px.pie(
+                category_chart,
+                names="category",
+                values="amount",
+                title="📊 Expense Distribution"
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+# Trend Graph
+
+st.markdown("### 📈 Spending Trend")
+
+trend = df.groupby("date")["amount"].sum().reset_index()
+
+fig_line = px.line(
+    trend,
+    x="date",
+    y="amount",
+    title="📅 Daily Spending Trend"
+)
+
+st.plotly_chart(fig_line, use_container_width=True)  
+
+st.markdown("### 🚨 Spending Alerts")
+
+high_spend = df[df["amount"] > df["amount"].mean() * 2]
+
+if not high_spend.empty:
+    st.warning("You have unusually high expenses!")
+    st.dataframe(high_spend)
+else:
+    st.success("No unusual spending detected 👍")
+
+# Spending Alerts
+
+st.markdown("### ⚡ Quick Actions")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("🔄 Refresh Dashboard"):
+        st.rerun()
+
+with col2:
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button("⬇ Download CSV", csv, "expenses.csv")
     
-     # ----------------- AI ADVICE SECTION -----------------
-    st.markdown("<br><hr><br>", unsafe_allow_html=True)
+# ----------------- AI ADVICE SECTION -----------------
+
+st.markdown("<br><hr><br>", unsafe_allow_html=True)
 st.header("💡 AI Financial Insights")
 
 try:
