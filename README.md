@@ -154,6 +154,12 @@ You can also try the deployed version of the app here: <br>
 https://titansledger.streamlit.app/
 ```
 
+## Username and Password
+
+Username and Password are temporarily Stored in json file. <br>
+Username : Admin <br>
+Password : 1234  
+
 ## Tech Stack
 
 ‣ Python

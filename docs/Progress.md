@@ -92,3 +92,15 @@
 
 ‣ AI Insights added for uploaded recipt
 ‣ Agent now can give powerful advice to User
+
+## DAY 5
+
+‣ Fallback Added for Errors and Removed unnessesary modules which were causing errors
+
+## DAY 6
+
+‣ Login Authentication Added with Login Page
+
+## DAY 7
+
+‣
