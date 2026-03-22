@@ -41,20 +41,16 @@ if not st.session_state["logged_in"]:
     st.stop()
 
 # Sidebar after login
-# col1, col2 = st.columns([8, 1])
+col1, col2 = st.columns([6, 2])
 
-# with col2:
-#     if st.button("🚪 Logout"):
-#         logout()
-#         st.rerun()
+with col1:
+    st.markdown(f"👤 Logged in as: **{st.session_state['username']}**")
 
-# st.write(f"👤 Logged in as: {st.session_state['username']}")
+with col2:
+    st.button("🚪 Logout", on_click=logout, use_container_width=True)
 
 # Set dark theme for matplotlib to match the new UI
 plt.style.use('dark_background')
-
-if "page" not in st.session_state:
-    st.session_state["page"] = "Dashboard"
 
 if "menu_open" not in st.session_state:
     st.session_state["menu_open"] = False
@@ -71,32 +67,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 st.caption("Upload receipts and automatically track your spending")
-
-# NAVBAR
-# col1, col2, col3, col4, col5, col6 = st.columns([4,1,1,1,2,1])
-
-# with col1:
-#     st.markdown("### 💰 TitansLedger")
-# NAVBAR
-col1, col2, col3, col4, col5 = st.columns([1,2,2,2,1])
-
-# ☰ Hamburger button
-with col1:
-    if st.button("☰"):
-        st.session_state["menu_open"] = True
-
-# Navigation buttons (equal width)
-with col2:
-    if st.button("Dashboard", use_container_width=True):
-        st.session_state["page"] = "Dashboard"
-
-with col3:
-    if st.button("Upload", use_container_width=True):
-        st.session_state["page"] = "Upload"
-
-with col4:
-    if st.button("Insights", use_container_width=True):
-        st.session_state["page"] = "Insights"
 
 st.markdown("---")
 
@@ -115,14 +85,10 @@ if st.session_state["menu_open"]:
 
 init_db()
 
-page = st.session_state["page"]
-
-if page == "Upload":
-
     # ----------------- MAIN UPLOAD SECTION -----------------
-    st.markdown("### 📥 Upload Receipt")
+st.markdown("### 📥 Upload Receipt")
 
-    uploaded_file = st.file_uploader(
+uploaded_file = st.file_uploader(
         "Drag and drop or click to upload a receipt (PNG, JPG, JPEG)",
         type=["png", "jpg", "jpeg"],
         label_visibility="collapsed" # Hides the redundant label for a cleaner look
@@ -130,7 +96,7 @@ if page == "Upload":
 
     # ----------------- IMAGE PREVIEW & EXTRACTION -----------------
 
-    if uploaded_file is not None:
+if uploaded_file is not None:
         # Small side preview for the image (col1) and data actions (col2)
         col1, col2 = st.columns([1, 3])
 
@@ -180,28 +146,12 @@ if page == "Upload":
                 st.success("All data deleted!")
                 st.rerun() # Refresh the app to clear the dashboard charts
 
-elif page == "Dashboard":
+# elif page == "Dashboard":
 
     # ----------------- DASHBOARD WITH DB -----------------
-    df = get_all_transactions()
+df = get_all_transactions()
 
-    # ----------------- DATE FILTER -----------------
-    st.markdown("### 📅 Filter Data")
-
-    date_range = st.selectbox(
-        "Select Time Range",
-        ["All Time", "Last 7 Days", "Last 30 Days"]
-    )
-
-    if not df.empty:
-        df["date"] = pd.to_datetime(df["date"], errors="coerce")
-
-        if date_range == "Last 7 Days":
-            df = df[df["date"] >= pd.Timestamp.now() - pd.Timedelta(days=7)]
-        elif date_range == "Last 30 Days":
-            df = df[df["date"] >= pd.Timestamp.now() - pd.Timedelta(days=30)]
-
-    if not df.empty:
+if not df.empty:
         # --- THIS SECTION SHOWS AS SOON AS THERE IS 1+ TRANSACTION ---
         st.markdown("<br><hr><br>", unsafe_allow_html=True)
         st.header("📊 Expense Dashboard")
@@ -209,11 +159,11 @@ elif page == "Dashboard":
         total_spent = df["amount"].sum()
         col1, col2 = st.columns(2)
 
-        # with col1:
-        #     st.metric("Total Spending", f"₹ {total_spent:,.2f}")
+        with col1:
+            st.metric("Total Spending", f"₹ {total_spent:,.2f}")
 
-        # with col2:
-        #     st.metric("Transactions", len(df))
+        with col2:
+            st.metric("Transactions", len(df))
 
         col1, col2, col3, col4 = st.columns(4)
 
@@ -246,22 +196,8 @@ elif page == "Dashboard":
         # --- CONDITIONAL CHART LOGIC ---
         # Only show charts if there are at least 2 transactions 
         # This prevents a "boring" pie chart with only one 100% slice.
-        if len(df) > 1:
+if len(df) > 1:
             st.markdown("---")
-            # category_chart = df.groupby("category")["amount"].sum()
-
-            # col_a, col_b = st.columns(2)
-
-            # with col_a:
-            #     st.subheader("📊 Expense by Category")
-            #     st.bar_chart(category_chart)
-
-            # with col_b:
-            #     st.subheader("🥧 Expense Distribution")
-            #     fig, ax = plt.subplots()
-            #     category_chart.plot.pie(autopct="%1.1f%%", ax=ax, startangle=90)
-            #     ax.set_ylabel("") 
-            #     st.pyplot(fig)
 
             category_chart = df.groupby("category")["amount"].sum().reset_index()
 
@@ -287,51 +223,60 @@ elif page == "Dashboard":
 
     # Trend Graph
 
-    st.markdown("### 📈 Spending Trend")
+st.markdown("### 📈 Spending Trend")
 
-    trend = df.groupby("date")["amount"].sum().reset_index()
+trend = df.groupby("date")["amount"].sum().reset_index()
 
-    fig_line = px.line(
+fig_line = px.line(
         trend,
         x="date",
         y="amount",
         title="📅 Daily Spending Trend"
     )
 
-    st.plotly_chart(fig_line, use_container_width=True)  
+st.plotly_chart(fig_line, use_container_width=True)  
 
-    st.markdown("### 🚨 Spending Alerts")
+st.markdown("### 🚨 Spending Alerts")
 
-    high_spend = df[df["amount"] > df["amount"].mean() * 2]
+high_spend = df[df["amount"] > df["amount"].mean() * 2]
 
-    if not high_spend.empty:
+if not high_spend.empty:
         st.warning("You have unusually high expenses!")
         st.dataframe(high_spend)
-    else:
+else:
         st.success("No unusual spending detected 👍")
 
-    # Spending Alerts
+# Spending Alerts
 
-    st.markdown("### ⚡ Quick Actions")
+st.markdown("<br>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+st.markdown("### ⚡ Quick Actions")
 
-    with col1:
-        if st.button("🔄 Refresh Dashboard"):
-            st.rerun()
+col1, col2 = st.columns(2)
 
-    with col2:
-        csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button("⬇ Download CSV", csv, "expenses.csv")
+with col1:
+    st.button(
+        "🔄 Refresh Dashboard",
+        on_click=st.rerun,
+        use_container_width=True
+    )
 
-elif page == "Insights":
+with col2:
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "⬇ Download CSV",
+        data=csv,
+        file_name="expenses.csv",
+        use_container_width=True
+    )
+
     # ----------------- AI ADVICE SECTION -----------------
 
-    df = get_all_transactions()
-    st.markdown("<br><hr><br>", unsafe_allow_html=True)
-    st.header("💡 AI Financial Insights")
+df = get_all_transactions()
+st.markdown("<br><hr><br>", unsafe_allow_html=True)
+st.header("💡 AI Financial Insights")
 
-    try:
+try:
         with st.spinner("Analyzing your spending with AI..."):
             # Optional: limit data (important for performance)
             df_sample = df.tail(50)
@@ -345,11 +290,11 @@ elif page == "Insights":
         </div>
         """, unsafe_allow_html=True)
 
-    except Exception as e:
+except Exception as e:
         st.error("Error generating AI insights")
         st.exception(e)
 
-    else:
+else:
         # --- THIS ONLY SHOWS THE VERY FIRST TIME (OR AFTER CLEARING DATA) ---
         st.info("👋 Welcome! Upload your first receipt above to start tracking your expenses.")
         st.markdown("<br><br>", unsafe_allow_html=True)
