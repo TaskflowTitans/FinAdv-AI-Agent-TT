@@ -103,4 +103,12 @@
 
 ## DAY 7
 
-‣
+‣ UI Updated and made more clean
+
+# WEEK 5
+
+‣ Updated UI and Fixed small errors
+‣ Agent Tested with payment receipts
+
+# WEEK 6
+
