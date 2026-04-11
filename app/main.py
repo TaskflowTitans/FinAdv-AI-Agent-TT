@@ -14,8 +14,15 @@ from tools.financial_advisor import generate_financial_advice
 import plotly.express as px
 from auth import login, signup, logout
 
-from tools.langchain_tool import ocr_extraction_tool
 from data.categories import categorize
+
+from agents.extraction_agent import ExtractionAgent
+from utils.image_utils import convert_to_base64
+
+extraction_agent = ExtractionAgent()
+
+from agents.cleaning_agent import CleaningAgent
+cleaning_agent = CleaningAgent()
 
 # PAGE CONFIG
 st.set_page_config(
@@ -118,28 +125,56 @@ if uploaded_files:
 
                 with st.spinner("Processing all receipts with AI..."):
                     for i, file in enumerate(uploaded_files):
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-                            tmp.write(file.getbuffer())
-                            temp_path = tmp.name
+                        # Convert image to base64
+                        image_base64 = convert_to_base64(file)
 
-                        result = ocr_extraction_tool.invoke({"image_path": temp_path})
-
-                        if isinstance(result, str):
-                            try:
-                                result = json.loads(result)
-                            except:
-                                st.error(f"Invalid response for file: {file.name}")
-                                continue
+                        # Call Extraction Agent
+                        result = extraction_agent.extract(image_base64)
+                        # 🔥 CLEAN THE DATA
 
                         if "error" in result:
-                            st.error(f"OCR failed for: {file.name}")
+                            st.error(f"Extraction failed for: {file.name}")
+                            continue
+                        
+                        cleaned_result = cleaning_agent.clean(result)
+
+                        if "error" in cleaned_result:
+                            st.error(f"Cleaning failed for: {file.name}")
                             continue
 
-                        description = result.get("description", "")
-                        result["category"] = categorize(description)
+                        # Better categorization
+                        merchant = cleaned_result.get("merchant", "")
+                        items_text = " ".join([item.get("name", "") for item in cleaned_result.get("items", [])])
+                        combined_text = merchant + " " + items_text
 
-                        insert_transaction(result)
-                        all_results.append(result)
+                        cleaned_result["category"] = categorize(combined_text)
+
+                         # Safe date parsing
+                        from datetime import datetime
+                        date = cleaned_result.get("date", "")
+
+                        try:
+                            parsed_date = datetime.strptime(date, "%Y-%m-%d").date()
+                        except:
+                            parsed_date = datetime.today().date()
+
+                        total = cleaned_result.get("total", 0)
+
+                        # Clean amount
+                        try:
+                            total = float(str(total).replace("₹", "").replace(",", "").strip())
+                        except:
+                            total = 0
+
+                        formatted_data = {
+                            "amount": total,
+                            "category": cleaned_result.get("category", "Other"),
+                            "date": str(parsed_date),
+                            "description": cleaned_result.get("merchant", "")
+                        }
+
+                        insert_transaction(formatted_data)
+                        all_results.append(formatted_data)
 
                         progress.progress((i + 1) / len(uploaded_files))
 
