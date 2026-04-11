@@ -10,7 +10,6 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 from database.db import init_db, insert_transaction, get_all_transactions
-from tools.financial_advisor import generate_financial_advice
 import plotly.express as px
 from auth import login, signup, logout
 
@@ -23,6 +22,12 @@ extraction_agent = ExtractionAgent()
 
 from agents.cleaning_agent import CleaningAgent
 cleaning_agent = CleaningAgent()
+
+from agents.analysis_agent import AnalysisAgent
+analysis_agent = AnalysisAgent()
+
+from agents.advisor_agent import AdvisorAgent
+advisor_agent = AdvisorAgent()
 
 # PAGE CONFIG
 st.set_page_config(
@@ -135,7 +140,7 @@ if uploaded_files:
                         if "error" in result:
                             st.error(f"Extraction failed for: {file.name}")
                             continue
-                        
+
                         cleaned_result = cleaning_agent.clean(result)
 
                         if "error" in cleaned_result:
@@ -196,8 +201,6 @@ if uploaded_files:
                 delete_all()
                 st.success("All data deleted!")
                 st.rerun() # Refresh the app to clear the dashboard charts
-
-# elif page == "Dashboard":
 
     # ----------------- DASHBOARD WITH DB -----------------
 df = get_all_transactions()
@@ -329,7 +332,6 @@ with col2:
 
     # ----------------- AI ADVICE SECTION -----------------
 
-df = get_all_transactions()
 if df.empty:
     st.info("👋 Upload receipts to start tracking your expenses.")
 st.markdown("<br><hr><br>", unsafe_allow_html=True)
@@ -337,21 +339,44 @@ st.header("💡 AI Financial Insights")
 
 try:
         with st.spinner("Analyzing your spending with AI..."):
-            # Optional: limit data (important for performance)
-            df_sample = df.tail(50)
 
-            advice = generate_financial_advice(df_sample)
+            transactions = df.tail(50).to_dict(orient="records")
+            if not transactions:
+                st.info("No data available for analysis yet.")  
+            else:
+                analysis = analysis_agent.analyze(transactions)
+                advice = advisor_agent.advise(analysis)
 
-        st.markdown(f"""
-        <div class="advice-box">
-            <h4>🧠 Smart AI Insights</h4>
-            <p>{advice}</p>
-        </div>
-        """, unsafe_allow_html=True)
+                if "error" in analysis:
+                    st.error("Analysis failed")
+                else:
+                    st.markdown("### 🧠 AI Insights")
+
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
+                        st.metric("Top Category", analysis.get("top_category"))
+
+                    with col2:
+                        st.metric("Total Spent", f"₹{analysis.get('total_spent')}")
+
+                    with col3:
+                        st.metric("Average Spend", f"₹{analysis.get('average_spend')}")
+
+                    st.markdown("### 📊 Key Insights")
+
+                    for insight in analysis.get("insights", []):
+                        st.info(insight)
 
 except Exception as e:
         st.error("Error generating AI insights")
         st.exception(e)
+
+st.markdown("### 💡 Smart Financial Advice")
+
+for line in advice.split("\n"):
+    if line.strip():
+        st.success(line)
 
 # CUSTOM CSS FOR MODERN ATTRACTIVE LOOK (Reference: Modern AI Apps)
 
