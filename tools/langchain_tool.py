@@ -12,8 +12,12 @@ def ocr_extraction_tool(image_path: str) -> str:
 
     data = extract_with_gemini_vision(image_path)
 
-    if data is None:
-        # return "Extraction failed"
-         return json.dumps({"error": "Extraction failed"})
+    if not data:
+        return json.dumps({"error": "Extraction failed"})
+
+    # Ensure required fields exist
+    data.setdefault("amount", None)
+    data.setdefault("date", None)
+    data.setdefault("description", "")
 
     return json.dumps(data)

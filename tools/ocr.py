@@ -103,6 +103,37 @@ def extract_json_from_response(text):
     print(text)
     return None
 
+def clean_with_llm(raw_data):
+    """
+    Cleans and standardizes OCR output using LLM.
+    """
+
+    prompt = f"""
+    You are a financial data cleaner.
+
+    Fix and normalize this transaction JSON:
+
+    Rules:
+    - Ensure amount is a number
+    - Fix date format to YYYY-MM-DD
+    - Clean merchant/description text
+    - Remove null noise if possible
+    - Keep ALL keys
+    - Do NOT add extra text
+
+    Input:
+    {raw_data}
+
+    Output ONLY valid JSON.
+    """
+
+    try:
+        response = call_gemini(HumanMessage(content=prompt))
+        cleaned = extract_json_from_response(response.content)
+        return cleaned if cleaned else raw_data
+    except:
+        return raw_data
+
 def extract_with_gemini_vision(img_path):
     with open(img_path, "rb") as image_file:
         image_data = base64.b64encode(image_file.read()).decode("utf-8")
@@ -112,18 +143,21 @@ def extract_with_gemini_vision(img_path):
             {
                 "type": "text",
                 "text": """
-You are a financial data extraction API.
+You are an advanced financial OCR extraction system.
 
-You MUST respond with ONLY a valid JSON object.
-No markdown.
-No explanations.
-No text before or after JSON.
+Extract structured data from this receipt image.
+
+STRICT RULES:
+- Return ONLY valid JSON
+- No markdown, no explanation
+- Fix OCR errors if possible (e.g. ₹45O → 450)
+- Normalize values
 
 JSON schema:
 {
   "amount": number | null,
   "currency": string | null,
-  "date": string | null,
+  "date": string (YYYY-MM-DD) | null,
   "time": string | null,
   "bank_name": string | null,
   "upi_id": string | null,
@@ -146,7 +180,13 @@ If a field is missing, use null.
 
     try:
         response = call_gemini(message)
-        return extract_json_from_response(response.content)
+        raw_json = extract_json_from_response(response.content)
+
+        if raw_json:
+            cleaned_json = clean_with_llm(raw_json)
+            return cleaned_json
+
+        return raw_json
 
     except Exception as e:
         print("⚠ Gemini failed, switching to fallback...", e)
@@ -158,13 +198,16 @@ If a field is missing, use null.
             (Fallback mode)
             """
             response = fallback_llm.invoke(fallback_prompt)
-            return extract_json_from_response(response.content)
+            raw_json = extract_json_from_response(response.content)
+
+            if raw_json:
+                return clean_with_llm(raw_json)
+
+            return raw_json
 
         except Exception as e2:
             print("❌ Fallback failed:", e2)
             return None
-
-    return extract_json_from_response(response.content)
 
 # result = extract_with_gemini_vision("data/samples/payment6.png")
 
