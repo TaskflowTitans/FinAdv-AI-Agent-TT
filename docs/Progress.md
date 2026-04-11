@@ -112,3 +112,35 @@
 
 # WEEK 6
 
+‣ Not made progress due to mid semester exams
+
+# WEEK 7
+
+## DAY 1
+
+‣ Team member's Task exchanged
+
+## DAY 2
+
+‣ Plans Studied and new ideas discussed
+
+## DAY 3
+
+‣ Categorization Updated
+
+## DAY 4
+
+‣ Project Updated for small Errors
+
+## DAY 5
+
+‣ Figured Minor Errors
+
+## DAY 6
+
+‣ Chart Logic Updated
+
+## DAY 7
+
+‣ Changes Pushed on Github
+

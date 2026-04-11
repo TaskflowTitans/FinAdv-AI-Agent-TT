@@ -193,33 +193,42 @@ if not df.empty:
         use_container_width=True
         )
 
-        # --- CONDITIONAL CHART LOGIC ---
-        # Only show charts if there are at least 2 transactions 
-        # This prevents a "boring" pie chart with only one 100% slice.
-if len(df) > 1:
-            st.markdown("---")
+# --- CONDITIONAL CHART LOGIC ---
+# --- IMPROVED CHART LOGIC ---
 
-            category_chart = df.groupby("category")["amount"].sum().reset_index()
+st.markdown("---")
 
-            col_a, col_b = st.columns(2)
+category_chart = df.groupby("category")["amount"].sum().reset_index()
 
-            with col_a:
-                fig_bar = px.bar(
-                    category_chart,
-                    x="category",
-                    y="amount",
-                    title="💸 Spending by Category"
-                )
-                st.plotly_chart(fig_bar, use_container_width=True)
+col_a, col_b = st.columns(2)
 
-            with col_b:
-                fig_pie = px.pie(
-                    category_chart,
-                    names="category",
-                    values="amount",
-                    title="📊 Expense Distribution"
-                )
-                st.plotly_chart(fig_pie, use_container_width=True)
+# ✅ ALWAYS show bar chart
+with col_a:
+    fig_bar = px.bar(
+        category_chart,
+        x="category",
+        y="amount",
+        title="💸 Spending by Category"
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+# ✅ Show pie chart ONLY if more than 1 category
+if len(category_chart) > 1:
+    with col_b:
+        fig_pie = px.pie(
+            category_chart,
+            names="category",
+            values="amount",
+            title="📊 Expense Distribution"
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+else:
+    # ✅ Helpful UX message
+    with col_b:
+        st.info("📊 All your spending is in one category. Add more transactions to see distribution.")
+
+if len(category_chart) == 1:
+    st.metric("Only Category", category_chart["category"].iloc[0])
 
     # Trend Graph
 
@@ -234,7 +243,7 @@ fig_line = px.line(
         title="📅 Daily Spending Trend"
     )
 
-st.plotly_chart(fig_line, use_container_width=True)  
+st.plotly_chart(fig_line, use_container_width=True)
 
 st.markdown("### 🚨 Spending Alerts")
 
