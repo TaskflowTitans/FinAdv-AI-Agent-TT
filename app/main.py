@@ -88,56 +88,72 @@ init_db()
     # ----------------- MAIN UPLOAD SECTION -----------------
 st.markdown("### 📥 Upload Receipt")
 
-uploaded_file = st.file_uploader(
+uploaded_files = st.file_uploader(
         "Drag and drop or click to upload a receipt (PNG, JPG, JPEG)",
         type=["png", "jpg", "jpeg"],
-        label_visibility="collapsed" # Hides the redundant label for a cleaner look
+        label_visibility="collapsed",
+         accept_multiple_files=True
     )
 
     # ----------------- IMAGE PREVIEW & EXTRACTION -----------------
 
-if uploaded_file is not None:
+if uploaded_files:
         # Small side preview for the image (col1) and data actions (col2)
         col1, col2 = st.columns([1, 3])
 
         with col1:
             st.markdown("##### 🖼️ Preview")
-            st.image(uploaded_file, use_container_width=True)
+
+            for file in uploaded_files:
+                st.image(file, use_container_width=True)
 
         with col2:
             st.markdown("##### ⚙️ Actions")
             
             # Action 1: Extract Data
-            if st.button("🔍 Extract Transaction"):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-                    tmp.write(uploaded_file.getbuffer())
-                    temp_path = tmp.name
+            if st.button("🔍 Extract Transactions", key="multi_extract"):
+                all_results = []
 
-                with st.spinner("Processing with AI..."):
-                    result = ocr_extraction_tool.invoke({"image_path": temp_path})
+                progress = st.progress(0) 
 
-                # if isinstance(result, str):
-                #     result = json.loads(result)
-                if isinstance(result, str):
-                    try:
-                        result = json.loads(result)
-                    except:
-                        st.error("Invalid response from OCR")
-                        st.stop()
+                with st.spinner("Processing all receipts with AI..."):
+                    for i, file in enumerate(uploaded_files):
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                            tmp.write(file.getbuffer())
+                            temp_path = tmp.name
 
-                if "error" in result:
-                    st.error("OCR Extraction Failed. Try another image.")
-                    st.stop()
+                        result = ocr_extraction_tool.invoke({"image_path": temp_path})
 
-                description = result.get("description", "")
-                result["category"] = categorize(description)
+                        if isinstance(result, str):
+                            try:
+                                result = json.loads(result)
+                            except:
+                                st.error(f"Invalid response for file: {file.name}")
+                                continue
 
-                insert_transaction(result)  
-                st.success("Transaction added successfully!")
-                
-                with st.expander("View Extracted JSON Data", expanded=True):
-                    st.json(result)
+                        if "error" in result:
+                            st.error(f"OCR failed for: {file.name}")
+                            continue
 
+                        description = result.get("description", "")
+                        result["category"] = categorize(description)
+
+                        insert_transaction(result)
+                        all_results.append(result)
+
+                        progress.progress((i + 1) / len(uploaded_files))
+
+                progress.empty()
+
+                if all_results:
+                    st.success(f"✅ {len(all_results)} transactions added successfully!")
+                else:
+                    st.error("❌ No valid transactions extracted.")
+
+                # Show all results
+                with st.expander("View Extracted Data", expanded=True):
+                    st.json(all_results)
+                    
             # Action 2: Clear Data (Now only appears when a file is uploaded)
             st.markdown("---") 
             if st.button("🗑️ Clear All Data",type="primary", help="This will wipe the entire database"):
@@ -193,67 +209,64 @@ if not df.empty:
         use_container_width=True
         )
 
-# --- CONDITIONAL CHART LOGIC ---
-# --- IMPROVED CHART LOGIC ---
+        st.markdown("---")
 
-st.markdown("---")
+        category_chart = df.groupby("category")["amount"].sum().reset_index()
 
-category_chart = df.groupby("category")["amount"].sum().reset_index()
+        col_a, col_b = st.columns(2)
 
-col_a, col_b = st.columns(2)
+        # ✅ ALWAYS show bar chart
+        with col_a:
+            fig_bar = px.bar(
+                category_chart,
+                x="category",
+                y="amount",
+                title="💸 Spending by Category"
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-# ✅ ALWAYS show bar chart
-with col_a:
-    fig_bar = px.bar(
-        category_chart,
-        x="category",
-        y="amount",
-        title="💸 Spending by Category"
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
+        # ✅ Show pie chart ONLY if more than 1 category
+        if len(category_chart) > 1:
+            with col_b:
+                fig_pie = px.pie(
+                    category_chart,
+                    names="category",
+                    values="amount",
+                    title="📊 Expense Distribution"
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            # ✅ Helpful UX message
+            with col_b:
+                st.info("📊 All your spending is in one category. Add more transactions to see distribution.")
 
-# ✅ Show pie chart ONLY if more than 1 category
-if len(category_chart) > 1:
-    with col_b:
-        fig_pie = px.pie(
-            category_chart,
-            names="category",
-            values="amount",
-            title="📊 Expense Distribution"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-else:
-    # ✅ Helpful UX message
-    with col_b:
-        st.info("📊 All your spending is in one category. Add more transactions to see distribution.")
+        if len(category_chart) == 1:
+            st.metric("Only Category", category_chart["category"].iloc[0])
 
-if len(category_chart) == 1:
-    st.metric("Only Category", category_chart["category"].iloc[0])
+        # Trend Graph
 
-    # Trend Graph
+        st.markdown("### 📈 Spending Trend")
 
-st.markdown("### 📈 Spending Trend")
+        trend = df.groupby("date")["amount"].sum().reset_index()
 
-trend = df.groupby("date")["amount"].sum().reset_index()
+        fig_line = px.line(
+                trend,
+                x="date",
+                y="amount",
+                title="📅 Daily Spending Trend"
+            )
 
-fig_line = px.line(
-        trend,
-        x="date",
-        y="amount",
-        title="📅 Daily Spending Trend"
-    )
+        st.plotly_chart(fig_line, use_container_width=True)
 
-st.plotly_chart(fig_line, use_container_width=True)
+        st.markdown("### 🚨 Spending Alerts")
 
-st.markdown("### 🚨 Spending Alerts")
+        high_spend = df[df["amount"] > df["amount"].mean() * 2]
 
-high_spend = df[df["amount"] > df["amount"].mean() * 2]
-
-if not high_spend.empty:
-        st.warning("You have unusually high expenses!")
-        st.dataframe(high_spend)
-else:
-        st.success("No unusual spending detected 👍")
+        if not high_spend.empty:
+                st.warning("You have unusually high expenses!")
+                st.dataframe(high_spend)
+        else:
+                st.success("No unusual spending detected 👍")
 
 # Spending Alerts
 
@@ -282,6 +295,8 @@ with col2:
     # ----------------- AI ADVICE SECTION -----------------
 
 df = get_all_transactions()
+if df.empty:
+    st.info("👋 Upload receipts to start tracking your expenses.")
 st.markdown("<br><hr><br>", unsafe_allow_html=True)
 st.header("💡 AI Financial Insights")
 
@@ -302,12 +317,6 @@ try:
 except Exception as e:
         st.error("Error generating AI insights")
         st.exception(e)
-
-else:
-        # --- THIS ONLY SHOWS THE VERY FIRST TIME (OR AFTER CLEARING DATA) ---
-        st.info("👋 Welcome! Upload your first receipt above to start tracking your expenses.")
-        st.markdown("<br><br>", unsafe_allow_html=True)
-
 
 # CUSTOM CSS FOR MODERN ATTRACTIVE LOOK (Reference: Modern AI Apps)
 
