@@ -1,0 +1,82 @@
+[33m41f3df9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Agents Updated
+[33ma9840ee[m Agents Updated
+[33mf1ecc6e[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Advisor and Analysis agent added
+[33meff83c0[m Cleaning agent and Extraction Agent added
+[33mc7c0b4b[m LLM Cleaner added in tools
+[33m035278a[m Chart Logic Updated
+[33m40ceb80[m Progress Updated
+[33m77d4990[m Merge pull request #29 from TaskflowTitans/feature/ocr-week1
+[33m9898221[m[33m ([m[1;31morigin/feature/ocr-week1[m[33m)[m Progress Updated
+[33m99417f7[m Merge pull request #28 from TaskflowTitans/feature/ocr-week1
+[33m40abded[m UI Updated and made clean
+[33m00ffff1[m Merge pull request #27 from TaskflowTitans/feature/ocr-week1
+[33me18476e[m Login Page Added
+[33m6d1d509[m Merge pull request #26 from TaskflowTitans/feature/ocr-week1
+[33mf2858ce[m Requirements.txt Updated
+[33m79f43c4[m Merge pull request #25 from TaskflowTitans/feature/ocr-week1
+[33maea87c7[m Added Dashboard Features and UI Updated
+[33m6a5621f[m Merge pull request #24 from TaskflowTitans/feature/ocr-week1
+[33mea84885[m Fallback Added
+[33m3212b64[m Merge pull request #23 from TaskflowTitans/feature/ocr-week1
+[33m4147059[m Removed CV2 as it was not needed and was  causing error
+[33ma773f27[m Merge pull request #22 from TaskflowTitans/feature/ocr-week1
+[33m1aa3946[m Removed CV2 as it was not needed and was  causing error
+[33m32699e6[m Merge pull request #21 from TaskflowTitans/feature/ocr-week1
+[33m56b0300[m Updated Python in Runtime.txt
+[33mcff052d[m Merge pull request #20 from TaskflowTitans/feature/ocr-week1
+[33mefd3804[m Requirements.txt updated
+[33mb3ef9f8[m Merge pull request #19 from TaskflowTitans/feature/ocr-week1
+[33m6f7595f[m UI Updated for mobile Devices  and AI Advice Added
+[33mbb27f3c[m Merge pull request #18 from TaskflowTitans/feature/ocr-week1
+[33m59b846a[m Categories added
+[33me93ee44[m Merge pull request #17 from TaskflowTitans/feature/ocr-week1
+[33m43dfaca[m DataBase Added and integrated with UI
+[33m36640ee[m Merge pull request #16 from TaskflowTitans/feature/ocr-week1
+[33mc3c0bb0[m Pytesseract Path added for local
+[33m4731d81[m Merge pull request #15 from TaskflowTitans/feature/ocr-week1
+[33m9afbe32[m README Updated and Streamlit App link Added
+[33mc499cc3[m Added Dev Container Folder
+[33m33c2066[m fix tesseract path for cloud
+[33m64911bc[m fix(deployment): use opencv-python-headless for streamlit cloud
+[33mdaf6bd0[m fix matplotlib build for python 3.14
+[33m04ffa2d[m force python 3.11 for streamlit deployment
+[33m505be32[m fix deployment: add runtime python version and tesseract package
+[33m2e06772[m Merge pull request #14 from TaskflowTitans/UI/Deployment-lead
+[33m956de16[m[33m ([m[1;31morigin/UI/Deployment-lead[m[33m)[m Merge branch 'main' into UI/Deployment-lead
+[33mfed30b6[m update main file logic
+[33m5c912e4[m Merge pull request #13 from TaskflowTitans/feature/ocr-week1
+[33m7261114[m Categorization Updated and Output Stored
+[33ma5afd9d[m Refactor expense_ai.py by removing duplicates
+[33md5a6725[m Rename geminiapi.env to .env
+[33m959f388[m Update geminiapi.env to include API key variable
+[33m416fe41[m Add files via upload
+[33m7ef21d3[m Add files via upload
+[33maecc877[m Merge pull request #12 from TaskflowTitans/feature/ocr-week1
+[33m3318b85[m ReadME Updated
+[33mfbffb0c[m Merge pull request #11 from TaskflowTitans/feature/ocr-week1
+[33m399c8f7[m README Updated
+[33mc2ea90d[m Merge pull request #10 from TaskflowTitans/feature/ocr-week1
+[33m229cf16[m Agent Added
+[33m5ae632c[m Merge pull request #9 from TaskflowTitans/feature/ocr-week1
+[33m205a997[m OCR replaced with GEMINI Vision
+[33m3825cfd[m Merge pull request #8 from TaskflowTitans/feature/ocr-week1
+[33m4bbc4fd[m OCR replaced with GEMINI Vision
+[33mec47af2[m Merge pull request #7 from TaskflowTitans/feature/ocr-week1
+[33m947fc6e[m Merge branch 'feature/ocr-week1' of https://github.com/TaskflowTitans/FinAdv-AI-Agent-TT into feature/ocr-week1
+[33m73849eb[m README Changed
+[33m67a6ad5[m Merge pull request #6 from TaskflowTitans/feature/ocr-week1
+[33m0276dd8[m Images added
+[33mb545fa3[m Merge pull request #5 from TaskflowTitans/main
+[33mba34562[m Flowchart added readme updated
+[33m250207d[m Flowchart added readme updated
+[33m38f6b72[m Merge pull request #4 from TaskflowTitans/feature/ocr-week1
+[33mbaf81b4[m readme updated and flowchart added
+[33m345c257[m Merge pull request #3 from TaskflowTitans/feature/ocr-week1
+[33mc726974[m OCR Updated and Tested
+[33m98f5a82[m Merge pull request #2 from TaskflowTitans/feature/ocr-week1
+[33mb313429[m Readme Updated
+[33ma7e1d1a[m Merge pull request #1 from TaskflowTitans/feature/ocr-week1
+[33m4d3573a[m OCR added
+[33m45529fe[m Virtual Environment Created and OCR added (By Sanjay)
+[33m19f82f4[m Read me changed and requirement.txt added (by Sanjay)
+[33m6384792[m Git Repo Initiated by Sanjay
