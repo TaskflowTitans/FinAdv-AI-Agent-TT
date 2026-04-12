@@ -139,8 +139,9 @@
 ## DAY 6
 
 ‣ Chart Logic Updated
+‣ Agents Added
 
 ## DAY 7
 
+‣ Agents Checked and Gemini Model Updated
 ‣ Changes Pushed on Github
-
