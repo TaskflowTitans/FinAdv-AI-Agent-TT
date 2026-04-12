@@ -6,9 +6,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 class AnalysisAgent:
     def __init__(self):
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             temperature=0,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
+            google_api_key=os.getenv("GEMINI_API_KEY")
         )
 
     def analyze(self, transactions: list):

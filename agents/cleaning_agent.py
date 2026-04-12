@@ -6,9 +6,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 class CleaningAgent:
     def __init__(self):
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",  # cheaper + fast
+            model="gemini-2.0-flash",
             temperature=0,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
+            google_api_key=os.getenv("GEMINI_API_KEY")
         )
 
     def clean(self, extracted_data: dict):
@@ -49,9 +49,8 @@ NO explanation. ONLY JSON.
         response = self.llm.invoke(prompt)
 
         try:
-            return json.loads(response.content)
-        except Exception:
-            return {
-                "error": "Cleaning failed",
-                "raw_output": response.content
-            }
+            raw_content = response.content.replace("```json", "").replace("```", "").strip()
+            return json.loads(raw_content)
+        except Exception as e:
+            print(f"DEBUG: Raw response was: {response.content}")
+            return {"error": "Failed to parse JSON", "details": str(e)}

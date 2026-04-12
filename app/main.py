@@ -1,9 +1,10 @@
-import sys
 import os
-
+from dotenv import load_dotenv
+load_dotenv()
+import sys
 # allow importing from project root
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+import time
 import tempfile
 import json
 import pandas as pd
@@ -130,6 +131,8 @@ if uploaded_files:
 
                 with st.spinner("Processing all receipts with AI..."):
                     for i, file in enumerate(uploaded_files):
+                        if i > 0:
+                            time.sleep(3)
                         # Convert image to base64
                         image_base64 = convert_to_base64(file)
 
@@ -345,8 +348,7 @@ try:
                 st.info("No data available for analysis yet.")  
             else:
                 analysis = analysis_agent.analyze(transactions)
-                advice = advisor_agent.advise(analysis)
-
+                
                 if "error" in analysis:
                     st.error("Analysis failed")
                 else:
@@ -368,15 +370,17 @@ try:
                     for insight in analysis.get("insights", []):
                         st.info(insight)
 
+                    st.markdown("### 💡 Smart Financial Advice")
+                    advice = advisor_agent.advise(analysis)
+
+                    for line in advice.split("\n"):
+                        if line.strip():
+                            st.success(line)
+
 except Exception as e:
         st.error("Error generating AI insights")
         st.exception(e)
 
-st.markdown("### 💡 Smart Financial Advice")
-
-for line in advice.split("\n"):
-    if line.strip():
-        st.success(line)
 
 # CUSTOM CSS FOR MODERN ATTRACTIVE LOOK (Reference: Modern AI Apps)
 
