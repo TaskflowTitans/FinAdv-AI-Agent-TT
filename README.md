@@ -162,10 +162,10 @@ Password : 1234
 
 ## Tech Stack
 
-‣ Python
-‣ LangChain
-‣ Google Gemini Vision
-‣ Pandas
+‣ Python <br>
+‣ LangChain <br>
+‣ Google Gemini Vision <br>
+‣ Pandas <br>
 
 ## Team Members
 

@@ -22,7 +22,7 @@ from utils.image_utils import convert_to_base64
 extraction_agent = ExtractionAgent()
 
 from agents.cleaning_agent import CleaningAgent
-cleaning_agent = CleaningAgent()
+# cleaning_agent = CleaningAgent()
 
 from agents.analysis_agent import AnalysisAgent
 analysis_agent = AnalysisAgent()
@@ -60,7 +60,7 @@ with col1:
     st.markdown(f"👤 Logged in as: **{st.session_state['username']}**")
 
 with col2:
-    st.button("🚪 Logout", on_click=logout, use_container_width=True)
+    st.button("🚪 Logout", on_click=logout, width="stretch")
 
 # Set dark theme for matplotlib to match the new UI
 plt.style.use('dark_background')
@@ -102,110 +102,76 @@ init_db()
 st.markdown("### 📥 Upload Receipt")
 
 uploaded_files = st.file_uploader(
-        "Drag and drop or click to upload a receipt (PNG, JPG, JPEG)",
-        type=["png", "jpg", "jpeg"],
-        label_visibility="collapsed",
-         accept_multiple_files=True
+    "Drag and drop or click to upload a receipt (PNG, JPG, JPEG)",
+    type=["png", "jpg", "jpeg"],
+    label_visibility="collapsed",
+    accept_multiple_files=True
     )
 
-    # ----------------- IMAGE PREVIEW & EXTRACTION -----------------
+# ----------------- IMAGE PREVIEW & EXTRACTION -----------------
 
 if uploaded_files:
-        # Small side preview for the image (col1) and data actions (col2)
-        col1, col2 = st.columns([1, 3])
+    # Small side preview for the image (col1) and data actions (col2)
+    col1, col2 = st.columns([1, 3])
 
-        with col1:
-            st.markdown("##### 🖼️ Preview")
+    with col1:
+        st.markdown("##### 🖼️ Preview")
+        for file in uploaded_files:
+            st.image(file, width="stretch")
 
-            for file in uploaded_files:
-                st.image(file, use_container_width=True)
+    with col2:
+        st.markdown("##### ⚙️ Actions")
+        
+        if st.button("🔍 Extract Transactions", key="multi_extract"):
+            all_results = []
+            progress = st.progress(0) 
 
-        with col2:
-            st.markdown("##### ⚙️ Actions")
-            
-            # Action 1: Extract Data
-            if st.button("🔍 Extract Transactions", key="multi_extract"):
-                all_results = []
+            with st.spinner("Processing all receipts with AI..."):
+                for i, file in enumerate(uploaded_files):
+                    if i > 0:
+                        time.sleep(15) # Throttling for Free Tier
+                    
+                    image_base64 = convert_to_base64(file)
+                    result = extraction_agent.extract(image_base64)
 
-                progress = st.progress(0) 
+                    if "error" in result:
+                        st.error(f"Failed: {file.name}. Error: {result.get('details')}")
+                        continue
 
-                with st.spinner("Processing all receipts with AI..."):
-                    for i, file in enumerate(uploaded_files):
-                        if i > 0:
-                            time.sleep(3)
-                        # Convert image to base64
-                        image_base64 = convert_to_base64(file)
+                    # Process categorization and formatting
+                    merchant = result.get("merchant", "Unknown")
+                    items_list = result.get("items", [])
+                    items_text = " ".join([item.get("name", "") for item in items_list])
+                    result["category"] = categorize(merchant + " " + items_text)
 
-                        # Call Extraction Agent
-                        result = extraction_agent.extract(image_base64)
-                        # 🔥 CLEAN THE DATA
-
-                        if "error" in result:
-                            st.error(f"Extraction failed for: {file.name}")
-                            continue
-
-                        cleaned_result = cleaning_agent.clean(result)
-
-                        if "error" in cleaned_result:
-                            st.error(f"Cleaning failed for: {file.name}")
-                            continue
-
-                        # Better categorization
-                        merchant = cleaned_result.get("merchant", "")
-                        items_text = " ".join([item.get("name", "") for item in cleaned_result.get("items", [])])
-                        combined_text = merchant + " " + items_text
-
-                        cleaned_result["category"] = categorize(combined_text)
-
-                         # Safe date parsing
-                        from datetime import datetime
-                        date = cleaned_result.get("date", "")
-
-                        try:
-                            parsed_date = datetime.strptime(date, "%Y-%m-%d").date()
-                        except:
-                            parsed_date = datetime.today().date()
-
-                        total = cleaned_result.get("total", 0)
-
-                        # Clean amount
-                        try:
-                            total = float(str(total).replace("₹", "").replace(",", "").strip())
-                        except:
-                            total = 0
-
+                    from datetime import datetime
+                    try:
                         formatted_data = {
-                            "amount": total,
-                            "category": cleaned_result.get("category", "Other"),
-                            "date": str(parsed_date),
-                            "description": cleaned_result.get("merchant", "")
+                            "amount": float(result.get("total", 0)),
+                            "category": result.get("category", "Other"),
+                            "date": result.get("date", str(datetime.today().date())),
+                            "description": merchant
                         }
-
                         insert_transaction(formatted_data)
                         all_results.append(formatted_data)
-
                         progress.progress((i + 1) / len(uploaded_files))
+                    except Exception as e:
+                        st.error(f"Data formatting error for {file.name}: {e}")
 
-                progress.empty()
+            progress.empty()
+            if all_results:
+                st.success(f"✅ Added {len(all_results)} transactions!")
+                st.rerun()
 
-                if all_results:
-                    st.success(f"✅ {len(all_results)} transactions added successfully!")
-                else:
-                    st.error("❌ No valid transactions extracted.")
+        # Action 2: Clear Data
+        st.markdown("---") 
+        if st.button("🗑️ Clear All Data", type="primary", help="This will wipe the entire database"):
+            from database.db import delete_all
+            delete_all()
+            st.success("All data deleted!")
+            st.rerun()
 
-                # Show all results
-                with st.expander("View Extracted Data", expanded=True):
-                    st.json(all_results)
-                    
-            # Action 2: Clear Data (Now only appears when a file is uploaded)
-            st.markdown("---") 
-            if st.button("🗑️ Clear All Data",type="primary", help="This will wipe the entire database"):
-                from database.db import delete_all
-                delete_all()
-                st.success("All data deleted!")
-                st.rerun() # Refresh the app to clear the dashboard charts
-
-    # ----------------- DASHBOARD WITH DB -----------------
+# ----------------- DASHBOARD WITH DB -----------------
 df = get_all_transactions()
 
 if not df.empty:
@@ -247,7 +213,7 @@ if not df.empty:
         # st.dataframe(df, use_container_width=True)
         st.dataframe(
         df.sort_values(by="amount", ascending=False),
-        use_container_width=True
+        width="stretch"
         )
 
         st.markdown("---")
@@ -264,7 +230,7 @@ if not df.empty:
                 y="amount",
                 title="💸 Spending by Category"
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width="stretch")
 
         # ✅ Show pie chart ONLY if more than 1 category
         if len(category_chart) > 1:
@@ -275,7 +241,7 @@ if not df.empty:
                     values="amount",
                     title="📊 Expense Distribution"
                 )
-                st.plotly_chart(fig_pie, use_container_width=True)
+                st.plotly_chart(fig_pie, width="stretch")
         else:
             # ✅ Helpful UX message
             with col_b:
@@ -297,7 +263,7 @@ if not df.empty:
                 title="📅 Daily Spending Trend"
             )
 
-        st.plotly_chart(fig_line, use_container_width=True)
+        st.plotly_chart(fig_line, width="stretch")
 
         st.markdown("### 🚨 Spending Alerts")
 
@@ -321,7 +287,7 @@ with col1:
     st.button(
         "🔄 Refresh Dashboard",
         on_click=st.rerun,
-        use_container_width=True
+        width="stretch"
     )
 
 with col2:
@@ -330,7 +296,7 @@ with col2:
         "⬇ Download CSV",
         data=csv,
         file_name="expenses.csv",
-        use_container_width=True
+        width="stretch"
     )
 
     # ----------------- AI ADVICE SECTION -----------------
