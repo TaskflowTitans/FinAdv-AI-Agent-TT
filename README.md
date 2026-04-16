@@ -158,7 +158,26 @@ https://titansledger.streamlit.app/
 
 Username and Password are temporarily Stored in json file. <br>
 Username : Admin <br>
-Password : 1234 
+Password : 1234
+
+## 🔑 API Configuration & Quota Notice
+
+This project is powered by **Gemini 2.0 Flash**. To ensure the AI agents perform analysis and extraction without interruption, please review the following technical requirements.
+
+### ⚠️ Note for Evaluators & Judges
+The application is optimized for high-performance receipt processing. However, due to the strict rate limits of the **Google AI Studio Free Tier**, you may encounter `429 RESOURCE_EXHAUSTED` errors if multiple receipts are uploaded rapidly.
+
+#### Recommended Setup:
+* **Pay-As-You-Go Billing:** For the most stable experience, it is highly recommended to use an API Key with **billing enabled**. This increases the Requests Per Minute (RPM) and Daily Quota, allowing for seamless testing of the agentic loops.
+* **Free Tier Usage:** If evaluating via the Free Tier, please allow **10–15 seconds** between receipt uploads to stay within the 'Tokens Per Minute' safety window.
+
+#### Installation:
+1. Obtain your API Key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Create a `.env` file in the root directory.
+3. Add your key:
+   ```env
+   GEMINI_API_KEY=your_actual_key_here
+   ```
 
 ## Tech Stack
 
