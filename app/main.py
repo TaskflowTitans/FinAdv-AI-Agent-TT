@@ -33,11 +33,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+if st.session_state.get("used_fallback"):
+    st.warning("⚠ Running in fallback mode (reduced accuracy)")
+else:
+    st.success("✅ AI system active (high accuracy)")
+
 # Session init
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 
 if not st.session_state["logged_in"]:
+
+    st.markdown("<h3 style='text-align:center;'>Welcome to TitansLedger</h3>", unsafe_allow_html=True)
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Sign Up"])
 
     with tab1:
@@ -106,6 +113,27 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True
     )
 
+# 🔥 SAMPLE RECEIPT BUTTON (ADD HERE)
+if st.button("📄 Try Sample Receipt"):
+
+    sample_path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "data",
+        "samples",
+        "payment1.jpg"
+    )
+
+    if not os.path.exists(sample_path):
+        st.error("Sample receipt not found.")
+    else:
+        base64_img = convert_to_base64(sample_path)
+        result = extraction_agent.extract(base64_img)
+
+        st.session_state["last_results"] = [result]
+
+        st.success("Sample receipt processed ✅")
+
 # ----------------- IMAGE PREVIEW & EXTRACTION -----------------
 
 def clean_result(result):
@@ -140,7 +168,7 @@ if uploaded_files:
             used_fallback = False
             progress = st.progress(0)
 
-            with st.spinner("Processing with AI Vision..."):
+            with st.spinner("Processing With TitansLedger..."):
                 for i, file in enumerate(uploaded_files):
                     if i > 0:
                         time.sleep(1)
@@ -205,6 +233,7 @@ if uploaded_files:
 
                     confidence = "high" if not result.get("fallback") else "low"
                     result["confidence"] = confidence
+                    result["is_upi"] = is_upi
 
                     progress.progress((i + 1) / len(uploaded_files))
 
@@ -212,6 +241,7 @@ if uploaded_files:
 
             if all_results:
                 st.session_state["pending_transactions"] = all_results
+                st.session_state["used_fallback"] = used_fallback
                 st.success(f"✅ Extracted {len(all_results)} transactions! (Review below before saving)" )
             else:
                 st.warning("⚠ No valid payment receipts found.")
@@ -226,7 +256,7 @@ if uploaded_files:
                 st.success("✅ High confidence extraction")
 
             st.json(res)
-            if "UPI" in res.get("description", "") or res.get("fallback") is not None:
+            if res.get("is_upi"):
                 st.caption("💳 UPI Transaction")
 
         st.markdown("---")
@@ -303,7 +333,11 @@ if st.session_state.get("pending_transactions"):
         st.rerun()
 
 # ----------------- DASHBOARD WITH DB -----------------
+
 df = get_all_transactions()
+
+if df.empty:
+    st.info("📭 No transactions yet. Upload a receipt to get started.")   
 
 if not df.empty:
         # --- THIS SECTION SHOWS AS SOON AS THERE IS 1+ TRANSACTION ---
@@ -314,7 +348,7 @@ if not df.empty:
         col1, col2 = st.columns(2)
 
         with col1:
-            st.metric("Total Spending", f"₹ {total_spent:,.2f}")
+            st.metric("Total Spending", f"₹{total_spent:,.2f}")
 
         with col2:
             st.metric("Transactions", len(df))
@@ -329,13 +363,13 @@ if not df.empty:
             st.metric("💰 Total", f"₹{total_spent:,.2f}")
 
         with col2:
-            st.metric("📅 Avg Spend", f"₹ {avg_spend:,.2f}")
+            st.metric("📅 Avg Spend", f"₹{avg_spend:,.2f}")
 
         with col3:
             st.metric("🏆 Top Category", top_category)
 
         with col4:
-            st.metric("⚠️ Highest", f"₹ {highest_txn:,.2f}")
+            st.metric("⚠️ Highest", f"₹{highest_txn:,.2f}")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -411,7 +445,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 st.markdown("### ⚡ Quick Actions")
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.button(
@@ -428,6 +462,12 @@ with col2:
         file_name="expenses.csv",
         width="stretch"
     )
+
+with col3:
+    if st.button("♻ Reset App", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
     # ----------------- AI ADVICE SECTION -----------------
 
@@ -452,6 +492,23 @@ if not df.empty:
     with col2:
         if st.button("🌿 Vidura", use_container_width=True):
             st.session_state["guru"] = "Vidura"
+
+    if st.button("⚖ Compare Gurus", use_container_width=True):
+
+        transactions = df.tail(50).to_dict(orient="records")
+        analysis = analysis_agent.analyze(transactions)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 🧠 Chanakya")
+            advice_c = advisor_agent.advise(analysis, "Chanakya")
+            st.info(advice_c)
+
+        with col2:
+            st.markdown("### 🌿 Vidura")
+            advice_v = advisor_agent.advise(analysis, "Vidura")
+            st.success(advice_v)
 
 # 👇 Only show insights AFTER guru selection
 if st.session_state.get("guru") is not None and not df.empty:
@@ -495,11 +552,23 @@ if st.session_state.get("guru") is not None and not df.empty:
 
         for line in advice.split("\n"):
             if line.strip():
-                st.success(line)
+                st.markdown(f"- {line}")
 
-if "used_fallback" in locals() and used_fallback:
+        st.markdown('</div>', unsafe_allow_html=True)
+
+if st.session_state.get("used_fallback"):
     st.warning("⚠ Some receipts used OCR fallback (lower accuracy)")
+    
+st.markdown("---")
+st.markdown("### 📌 About TitansLedger")
 
+st.caption("""
+TitansLedger is an AI-powered expense tracking system designed for Indian users.
+It combines OCR, fallback parsing, and philosophy-driven financial advice
+to deliver a robust and intelligent personal finance assistant.
+           
+Created by Taskflow Titians
+""")
 
 # CUSTOM CSS FOR MODERN ATTRACTIVE LOOK (Reference: Modern AI Apps)
 

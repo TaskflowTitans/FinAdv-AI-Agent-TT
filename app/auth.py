@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import time
 
 # Path to users.json
 USER_FILE = os.path.join(os.path.dirname(__file__), "users.json")
@@ -28,15 +29,19 @@ def login():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        users = load_users()
 
-        if username in users and users[username] == password:
-            st.session_state["logged_in"] = True
-            st.session_state["username"] = username
-            st.success("Login successful ✅")
-            st.rerun()
-        else:
-            st.error("Invalid username or password ❌")
+        with st.spinner("🔐 Authenticating..."):
+            time.sleep(1)  # small delay for UX
+
+            users = load_users()
+
+            if username in users and users[username] == password:
+                st.session_state["logged_in"] = True
+                st.session_state["username"] = username
+                st.success("Login successful ✅")
+                st.rerun()
+            else:
+                st.error("Invalid username or password ❌")
 
 
 # SIGNUP FUNCTION (IMPORTANT ADD)

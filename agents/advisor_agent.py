@@ -11,61 +11,78 @@ class AdvisorAgent:
 
         advice = []
 
-        # 🔹 Base observations
+        # 🔹 Observations
         if avg > 500:
-            advice.append("Your daily spending is high.")
+            advice.append(("high_spend", "Your daily spending is high."))
 
         if top_cat:
-            advice.append(f"You are spending most on {top_cat}.")
+            advice.append(("top_category", f"You spend most on {top_cat}."))
 
         if total > 10000:
-            advice.append("Your total spending is significantly high.")
+            advice.append(("total_high", "Your total spending is significantly high."))
 
         if not advice:
-            advice.append("Your spending is currently balanced.")
+            advice.append(("balanced", "Your spending is balanced."))
 
-        # 🔥 CHANAKYA STYLE (strict, strategic)
+        # 🧠 CHANAKYA (STRATEGIC)
+
         if guru == "Chanakya":
-            styled_advice = []
 
-            for a in advice:
-                if "high" in a.lower():
-                    styled_advice.append(
-                        "Control your expenses immediately. Wealth once lost is difficult to regain."
+            styled = []
+
+            for tag, text in advice:
+
+                if tag == "high_spend":
+                    styled.append(
+                        "Excess daily spending weakens financial power. Control it immediately."
                     )
-                elif "most on" in a:
-                    styled_advice.append(
-                        f"Excess focus on {top_cat} is a weakness. Discipline your spending or it will control you."
+
+                elif tag == "top_category" and top_cat != "Others":
+                    styled.append(
+                        f"Your focus on {top_cat} reveals a vulnerability. Discipline this habit before it dominates you."
                     )
+
+                elif tag == "total_high":
+                    styled.append(
+                        "Wealth without control is temporary. Reduce expenses and build reserves."
+                    )
+
                 else:
-                    styled_advice.append(
-                        "Maintain strict discipline. Even small leakages destroy great wealth."
+                    styled.append(
+                        "Maintain strict discipline. Small financial leaks destroy long-term strength."
                     )
 
-        # 🌿 VIDURA STYLE (wise, balanced)
+            return "\n".join(styled)
+
+        # 🌿 VIDURA (BALANCED)
+        
         elif guru == "Vidura":
-            styled_advice = []
 
-            for a in advice:
-                if "high" in a.lower():
-                    styled_advice.append(
-                        "Excess spending disturbs balance in life. Practice moderation and mindful choices."
+            styled = []
+
+            for tag, text in advice:
+
+                if tag == "high_spend":
+                    styled.append(
+                        "Excess spending disturbs balance. Practice moderation in daily life."
                     )
-                elif "most on" in a and top_cat != "uncategorized":
-                    styled_advice.append(
+
+                elif tag == "top_category" and top_cat != "Others":
+                    styled.append(
                         f"Your inclination towards {top_cat} should be guided with awareness, not impulse."
                     )
-                elif top_cat == "uncategorized":
-                    styled_advice.append(
-                        "Your spending is unclear. Track categories properly to gain control over your finances."
+
+                elif tag == "total_high":
+                    styled.append(
+                        "True prosperity comes from balance between earning and spending."
                     )
+
                 else:
-                    styled_advice.append(
-                        "Balance between needs and desires leads to lasting prosperity."
+                    styled.append(
+                        "A balanced financial path leads to stability and peace."
                     )
 
-        # ✅ fallback safety
-        else:
-            styled_advice = advice
+            return "\n".join(styled)
 
-        return "\n".join(styled_advice)
+        # fallback
+        return "No advice available."

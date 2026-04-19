@@ -81,7 +81,7 @@
 
 ## DAY 2
 
-‣ Database Added 
+‣ Database Added <br>
 ‣ Database Integrated with UI
 
 ## DAY 3
@@ -90,7 +90,7 @@
 
 ## DAY 4
 
-‣ AI Insights added for uploaded recipt
+‣ AI Insights added for uploaded recipt <br>
 ‣ Agent now can give powerful advice to User
 
 ## DAY 5
@@ -107,7 +107,7 @@
 
 # WEEK 5
 
-‣ Updated UI and Fixed small errors
+‣ Updated UI and Fixed small errors <br>
 ‣ Agent Tested with payment receipts
 
 # WEEK 6
@@ -138,10 +138,47 @@
 
 ## DAY 6
 
-‣ Chart Logic Updated
+‣ Chart Logic Updated <br>
 ‣ Agents Added
 
 ## DAY 7
 
-‣ Agents Checked and Gemini Model Updated
+‣ Agents Checked and Gemini Model Updated <br>
 ‣ Changes Pushed on Github
+
+# WEEK 8
+
+## DAY 1
+
+‣ Issue faced regarding GEMINI API KEY solved
+
+## DAY 2
+
+‣ Categorization Updated
+
+## DAY 3
+
+‣ OCR added as fallback for GEMINI VISION
+
+## DAY 4
+
+‣ GEMINI limit exhaust due to rate limits <br>
+‣ Billing to be added if faces any error regarding EXHAUSTING QUOTA
+
+## DAY 5
+
+‣ Updated OCR <br>
+‣ User Cutomizable panel added where users can check manually if extracted data is correct
+
+## DAY 6
+
+‣ Gurus Added after extraction of data, user can now select from given choice
+
+## DAY 7
+
+‣ OCR Replaced with Microoft AZURE <br>
+‣ Azure connected with main and added as fallback with GEMINI Vision
+
+## DAY 8
+
+‣ More Enhanced features added like COMPARE GURUS
