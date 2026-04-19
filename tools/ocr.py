@@ -1,17 +1,14 @@
-from urllib import response
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage
 import os
 # import cv2
 import pytesseract
 from PIL import Image, ImageEnhance
 import re
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_groq import ChatGroq
 import base64
 import json 
 from tenacity import retry, stop_after_attempt, wait_exponential
-from langchain_groq import ChatGroq
+from datetime import datetime
+
 
 load_dotenv()
 
@@ -61,23 +58,12 @@ else:
 # OCR is not working well for all samples, especially those with complex backgrounds and layouts.
 
 # pytesseract path for local
+
 # Do not remove this line, as it is necessary for pytesseract to work on Windows. Update the path if tesseract is installed elsewhere on your system. just comment it if you have a different path.
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Update this path if tesseract is installed elsewhere
 
-# With GEMINI Vision Method
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=gemini_api_key)
-
-fallback_llm = ChatGroq(
-    model="llama3-70b-8192",
-    api_key=groq_api_key
-)
-
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=10))
-def call_gemini(message):
-    return llm.invoke([message])
-
-from langchain_core.messages import HumanMessage
+# Update this path if tesseract is installed elsewhere
 
 def extract_json_from_response(text):
     """
@@ -103,126 +89,100 @@ def extract_json_from_response(text):
     print(text)
     return None
 
-def clean_with_llm(raw_data):
-    """
-    Cleans and standardizes OCR output using LLM.
-    """
+def extract_with_tesseract(img_path):
 
-    prompt = f"""
-    You are a financial data cleaner.
+    image = Image.open(img_path)
+    image = ImageEnhance.Contrast(image).enhance(2)
+    image = image.convert("L")
+    custom_config = r'--oem 3 --psm 6'
 
-    Fix and normalize this transaction JSON:
+    text = pytesseract.image_to_string(image, config=custom_config)
+    print("\n===== OCR TEXT =====\n", text)
 
-    Rules:
-    - Ensure amount is a number
-    - Fix date format to YYYY-MM-DD
-    - Clean merchant/description text
-    - Remove null noise if possible
-    - Keep ALL keys
-    - Do NOT add extra text
+    if "autopay" in text.lower() or "upi lite" in text.lower():
+        return {
+            "error": "Not a payment receipt"
+        }
 
-    Input:
-    {raw_data}
+    lines = text.split("\n")
+    amount = 0
 
-    Output ONLY valid JSON.
-    """
+    # 1️⃣ PRIORITY: "Up to ₹2000" OR "₹2000"
+    for line in lines:
+        if "up to" in line.lower() or "₹" in line:
+            match = re.search(r"\d{2,6}", line)
+            if match:
+                amount = float(match.group())
+                break
+
+    # 2️⃣ PRIORITY: largest realistic number near currency context
+    if amount == 0:
+        candidates = []
+
+        for line in lines:
+            nums = re.findall(r"\d{2,6}", line)
+            for num in nums:
+                val = float(num)
+
+                # ignore obvious noise (dates, time, etc.)
+                if 50 <= val <= 50000:
+                    candidates.append(val)
+
+        if candidates:
+            # Prefer values close to detected "up to" context
+            candidates = sorted(candidates)
+
+            # pick smallest reasonable (NOT largest)
+            amount = candidates[0]
+
+    # -------- DATE (ALWAYS DEFINE) --------
+    date = None
+
+    date_patterns = [
+        r"\d{2}[/-]\d{2}[/-]\d{4}",
+        r"\d{1,2}\s\w+\s\d{4}"   # e.g. 18 Apr 2026
+    ]
+
+    for pattern in date_patterns:
+        match = re.search(pattern, text)
+        if match:
+            date = match.group()
+            break
 
     try:
-        response = call_gemini(HumanMessage(content=prompt))
-        cleaned = extract_json_from_response(response.content)
-        return cleaned if cleaned else raw_data
+        date = datetime.strptime(date, "%d %b %Y").strftime("%Y-%m-%d")
     except:
-        return raw_data
+        pass
 
-def extract_with_gemini_vision(img_path):
-    with open(img_path, "rb") as image_file:
-        image_data = base64.b64encode(image_file.read()).decode("utf-8")
+    # -------- MERCHANT (ALWAYS DEFINE) --------
+    merchant = "Unknown"
+    for line in lines:
+        if line.lower().startswith("to"):
+            merchant = line.replace("To:", "").strip()
+            break
 
-    message = HumanMessage(
-        content=[
-            {
-                "type": "text",
-                "text": """
-You are an advanced financial OCR extraction system.
+    
+    # -------- SENDER (PAYER) --------
+    sender = "Unknown"
+    for line in lines:
+        if line.lower().startswith("from"):
+            sender = line.replace("From:", "").replace("@", "").strip()
+            break
 
-Extract structured data from this receipt image.
-
-STRICT RULES:
-- Return ONLY valid JSON
-- No markdown, no explanation
-- Fix OCR errors if possible (e.g. ₹45O → 450)
-- Normalize values
-
-JSON schema:
-{
-  "amount": number | null,
-  "currency": string | null,
-  "date": string (YYYY-MM-DD) | null,
-  "time": string | null,
-  "bank_name": string | null,
-  "upi_id": string | null,
-  "transaction_id": string | null,
-  "payment_status": string | null,
-  "description": string | null
-}
-
-If a field is missing, use null.
-"""
-            },
-            {
-                "type": "image_url",
-                "image_url": f"data:image/png;base64,{image_data}"
-            },
-        ]
-    )
-
-    # response = llm.invoke([message])
-
-    try:
-        response = call_gemini(message)
-        raw_json = extract_json_from_response(response.content)
-
-        if raw_json:
-            cleaned_json = clean_with_llm(raw_json)
-            return cleaned_json
-
-        return raw_json
-
-    except Exception as e:
-        print("⚠ Gemini failed, switching to fallback...", e)
-
-        try:
-            fallback_prompt = f"""
-            Extract transaction data and return JSON only.
-
-            (Fallback mode)
-            """
-            response = fallback_llm.invoke(fallback_prompt)
-            raw_json = extract_json_from_response(response.content)
-
-            if raw_json:
-                return clean_with_llm(raw_json)
-
-            return raw_json
-
-        except Exception as e2:
-            print("❌ Fallback failed:", e2)
-            return None
-
-# result = extract_with_gemini_vision("data/samples/payment6.png")
-
-# Print the result to test
-# print("\n===== EXTRACTION RESULT =====")
-# print(json.dumps(result, indent=4))
-
-# Test block
-
-# if __name__ == "__main__":
-#     test_path = "data/samples/payment1.jpg"
-
-#     if os.path.exists(test_path):
-#         result = extract_with_gemini_vision(test_path)
-#         print("\n===== STRUCTURED OUTPUT =====\n")
-#         print(json.dumps(result, indent=4))
-#     else:
-#         print("❌ File not found")
+    if amount == 0:
+        print("⚠ No reliable amount found")
+        return {
+            "amount": 0,
+            "date": None,
+            "description": "Unknown",
+            "sender": "Unknown",
+            "currency": "INR"
+        }
+    
+    return {
+        "amount": amount,
+        "date": date,
+        "description": merchant,
+        "sender": sender,
+        "currency": "INR"
+    }

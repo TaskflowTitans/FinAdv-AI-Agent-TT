@@ -1,40 +1,25 @@
-import os
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-
 class AdvisorAgent:
-    def __init__(self):
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            temperature=0.3,  # slight creativity
-            google_api_key=os.getenv("GEMINI_API_KEY")
-        )
-
     def advise(self, analysis: dict):
-        """
-        Generate personalized financial advice based on analysis
-        """
+        if "error" in analysis:
+            return "No advice available."
 
-        prompt = f"""
-You are a smart financial advisor.
+        advice = []
 
-Based on this financial analysis:
+        total = analysis.get("total_spent", 0)
+        avg = analysis.get("average_spend", 0)
+        top_cat = analysis.get("top_category", "")
 
-{analysis}
+        # Rule-based advice
+        if avg > 500:
+            advice.append("Try reducing daily expenses below ₹500.")
 
-Give personalized, practical advice.
+        if top_cat:
+            advice.append(f"You spend most on {top_cat}. Consider cutting this down.")
 
-Rules:
-- Be specific (mention amounts, categories)
-- Give 3–5 actionable tips
-- Be concise and helpful
-- Focus on saving money and better habits
+        if total > 10000:
+            advice.append("Your total spending is high. Consider setting a monthly budget.")
 
-Format:
-- Use bullet points
-- No JSON, only plain text
-"""
+        if not advice:
+            advice.append("Your spending looks balanced. Keep it up!")
 
-        response = self.llm.invoke(prompt)
-
-        return response.content
+        return "\n".join([f"• {a}" for a in advice])

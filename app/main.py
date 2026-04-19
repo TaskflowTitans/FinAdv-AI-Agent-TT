@@ -19,9 +19,10 @@ from data.categories import categorize
 from agents.extraction_agent import ExtractionAgent
 from utils.image_utils import convert_to_base64
 
+from datetime import datetime
 extraction_agent = ExtractionAgent()
 
-from agents.cleaning_agent import CleaningAgent
+# from agents.cleaning_agent import CleaningAgent
 # cleaning_agent = CleaningAgent()
 
 from agents.analysis_agent import AnalysisAgent
@@ -110,6 +111,22 @@ uploaded_files = st.file_uploader(
 
 # ----------------- IMAGE PREVIEW & EXTRACTION -----------------
 
+def clean_result(result):
+    try:
+        result["total"] = float(result.get("total", 0))
+    except:
+        result["total"] = 0
+
+    if not result.get("date"):
+        result["date"] = None
+
+    if not isinstance(result.get("items"), list):
+        result["items"] = []
+
+    return result
+
+used_fallback = False
+
 if uploaded_files:
     # Small side preview for the image (col1) and data actions (col2)
     col1, col2 = st.columns([1, 3])
@@ -123,45 +140,69 @@ if uploaded_files:
         st.markdown("##### ⚙️ Actions")
         
         if st.button("🔍 Extract Transactions", key="multi_extract"):
+            st.session_state["last_results"] = []
             all_results = []
-            progress = st.progress(0) 
+            progress = st.progress(0)
 
-            with st.spinner("Processing all receipts with AI..."):
+            with st.spinner("Processing with AI..."):
                 for i, file in enumerate(uploaded_files):
                     if i > 0:
-                        time.sleep(15) # Throttling for Free Tier
+                        time.sleep(2) # Throttling for Free Tier
                     
                     image_base64 = convert_to_base64(file)
                     result = extraction_agent.extract(image_base64)
 
                     if "error" in result:
-                        st.error(f"Failed: {file.name}. Error: {result.get('details')}")
+                        st.error(f"❌ {file.name}: {result.get('error')}")
                         continue
+
+                    if result.get("fallback"):
+                        used_fallback = True
+
+                    result = clean_result(result)
+
+                    amount = float(result.get("total", 0))
+
+                    if amount <= 0:
+                        st.warning(f"⚠ Skipping invalid transaction: {file.name}")
+                        continue
+
+                    st.session_state["last_results"].append(result)
 
                     # Process categorization and formatting
                     merchant = result.get("merchant", "Unknown")
+                    sender = result.get("sender", "Unknown")
                     items_list = result.get("items", [])
                     items_text = " ".join([item.get("name", "") for item in items_list])
                     result["category"] = categorize(merchant + " " + items_text)
 
                     from datetime import datetime
+                    
                     try:
+                        date_val = result.get("date")
+
+                        if not date_val:
+                            st.warning(f"⚠ Date not detected for {file.name}, using today.")
+                            date_val = str(datetime.today().date())
+
                         formatted_data = {
-                            "amount": float(result.get("total", 0)),
+                            "amount": amount,
                             "category": result.get("category", "Other"),
-                            "date": result.get("date", str(datetime.today().date())),
-                            "description": merchant
+                            "date": date_val,
+                            "description": f"{sender} → {merchant}"
                         }
                         insert_transaction(formatted_data)
                         all_results.append(formatted_data)
                         progress.progress((i + 1) / len(uploaded_files))
+
                     except Exception as e:
                         st.error(f"Data formatting error for {file.name}: {e}")
 
             progress.empty()
             if all_results:
                 st.success(f"✅ Added {len(all_results)} transactions!")
-                st.rerun()
+            elif uploaded_files:
+                st.warning("⚠ No valid payment receipts found in uploaded files.")
 
         # Action 2: Clear Data
         st.markdown("---") 
@@ -170,6 +211,9 @@ if uploaded_files:
             delete_all()
             st.success("All data deleted!")
             st.rerun()
+
+for res in st.session_state.get("last_results", []):
+    st.json(res)
 
 # ----------------- DASHBOARD WITH DB -----------------
 df = get_all_transactions()
@@ -210,7 +254,6 @@ if not df.empty:
 
         # TABLE - Always show the history if data exists
         st.subheader("📋 Transaction History")
-        # st.dataframe(df, use_container_width=True)
         st.dataframe(
         df.sort_values(by="amount", ascending=False),
         width="stretch"
@@ -346,6 +389,9 @@ try:
 except Exception as e:
         st.error("Error generating AI insights")
         st.exception(e)
+
+if used_fallback:
+    st.warning("⚠ Some receipts used OCR fallback (lower accuracy)")
 
 
 # CUSTOM CSS FOR MODERN ATTRACTIVE LOOK (Reference: Modern AI Apps)

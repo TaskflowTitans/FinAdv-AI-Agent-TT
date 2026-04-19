@@ -1,53 +1,42 @@
-import os
-import json
-from langchain_google_genai import ChatGoogleGenerativeAI
-
+import pandas as pd
 
 class AnalysisAgent:
-    def __init__(self):
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            temperature=0,
-            google_api_key=os.getenv("GEMINI_API_KEY")
+    def analyze(self, transactions: list):
+        if not transactions:
+            return {"error": "No transactions"}
+
+        df = pd.DataFrame(transactions)
+
+        # Convert safely
+        df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
+
+        total_spent = df["amount"].sum()
+        avg_spend = df["amount"].mean()
+
+        category_spend = df.groupby("category")["amount"].sum()
+        top_category = category_spend.idxmax()
+
+        high_spending_days = (
+            df.groupby("date")["amount"].sum()
+            .loc[lambda x: x > 2 * avg_spend]
+            .index.tolist()
         )
 
-    def analyze(self, transactions: list):
-        """
-        Analyze spending patterns from transaction list
-        """
+        insights = []
 
-        prompt = f"""
-You are a financial analysis expert.
+        if avg_spend > 500:
+            insights.append("Your average spending is quite high.")
 
-Analyze the following transactions:
+        if len(high_spending_days) > 0:
+            insights.append(f"High spending detected on {len(high_spending_days)} days.")
 
-{json.dumps(transactions)}
+        if top_category:
+            insights.append(f"Most money spent on {top_category}.")
 
-Return ONLY JSON in this format:
-{{
-  "top_category": "",
-  "total_spent": 0,
-  "average_spend": 0,
-  "high_spending_days": [],
-  "insights": []
-}}
-
-Rules:
-- top_category = category with highest total spend
-- total_spent = sum of all amounts
-- average_spend = average per transaction
-- high_spending_days = days where spending > 2x average
-- insights = 3-5 useful financial observations
-
-NO explanation. ONLY JSON.
-"""
-
-        response = self.llm.invoke(prompt)
-
-        try:
-            return json.loads(response.content)
-        except Exception:
-            return {
-                "error": "Analysis failed",
-                "raw_output": response.content
-            }
+        return {
+            "top_category": top_category,
+            "total_spent": round(total_spent, 2),
+            "average_spend": round(avg_spend, 2),
+            "high_spending_days": high_spending_days,
+            "insights": insights
+        }
