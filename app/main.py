@@ -13,21 +13,15 @@ import matplotlib.pyplot as plt
 from database.db import init_db, insert_transaction, get_all_transactions
 import plotly.express as px
 from auth import login, signup, logout
-
+import tempfile
+from tools.ocr import extract_with_tesseract
 from data.categories import categorize
-
 from agents.extraction_agent import ExtractionAgent
 from utils.image_utils import convert_to_base64
-
 from datetime import datetime
 extraction_agent = ExtractionAgent()
-
-# from agents.cleaning_agent import CleaningAgent
-# cleaning_agent = CleaningAgent()
-
 from agents.analysis_agent import AnalysisAgent
 analysis_agent = AnalysisAgent()
-
 from agents.advisor_agent import AdvisorAgent
 advisor_agent = AdvisorAgent()
 
@@ -144,76 +138,63 @@ if uploaded_files:
             all_results = []
             progress = st.progress(0)
 
-            with st.spinner("Processing with AI..."):
+            with st.spinner("Processing with OCR..."):
                 for i, file in enumerate(uploaded_files):
                     if i > 0:
-                        time.sleep(2) # Throttling for Free Tier
-                    
-                    image_base64 = convert_to_base64(file)
-                    result = extraction_agent.extract(image_base64)
+                        time.sleep(1)
+
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+                        tmp.write(file.read())
+                        tmp_path = tmp.name
+
+                    result = extract_with_tesseract(tmp_path)
+
+                    st.session_state["last_results"].append(result)
 
                     if "error" in result:
-                        st.error(f"❌ {file.name}: {result.get('error')}")
+                        st.warning(f"⚠ {file.name}: {result.get('error')}")
                         continue
 
-                    if result.get("fallback"):
-                        used_fallback = True
-
-                    result = clean_result(result)
-
-                    amount = float(result.get("total", 0))
+                    amount = float(result.get("amount", 0))
 
                     if amount <= 0:
                         st.warning(f"⚠ Skipping invalid transaction: {file.name}")
                         continue
 
-                    st.session_state["last_results"].append(result)
-
-                    # Process categorization and formatting
-                    merchant = result.get("merchant", "Unknown")
+                    merchant = result.get("description", "Unknown")
                     sender = result.get("sender", "Unknown")
-                    items_list = result.get("items", [])
-                    items_text = " ".join([item.get("name", "") for item in items_list])
-                    result["category"] = categorize(merchant + " " + items_text)
 
-                    from datetime import datetime
-                    
-                    try:
-                        date_val = result.get("date")
+                    formatted_data = {
+                        "amount": amount,
+                        "category": categorize(merchant),
+                        "date": result.get("date") or str(datetime.today().date()),
+                        "description": f"{sender} → {merchant}"
+                    }
 
-                        if not date_val:
-                            st.warning(f"⚠ Date not detected for {file.name}, using today.")
-                            date_val = str(datetime.today().date())
+                    insert_transaction(formatted_data)
+                    all_results.append(formatted_data)
 
-                        formatted_data = {
-                            "amount": amount,
-                            "category": result.get("category", "Other"),
-                            "date": date_val,
-                            "description": f"{sender} → {merchant}"
-                        }
-                        insert_transaction(formatted_data)
-                        all_results.append(formatted_data)
-                        progress.progress((i + 1) / len(uploaded_files))
-
-                    except Exception as e:
-                        st.error(f"Data formatting error for {file.name}: {e}")
+                    progress.progress((i + 1) / len(uploaded_files))
 
             progress.empty()
+
             if all_results:
                 st.success(f"✅ Added {len(all_results)} transactions!")
-            elif uploaded_files:
-                st.warning("⚠ No valid payment receipts found in uploaded files.")
+            else:
+                st.warning("⚠ No valid payment receipts found.")
 
-        # Action 2: Clear Data
-        st.markdown("---") 
-        if st.button("🗑️ Clear All Data", type="primary", help="This will wipe the entire database"):
+        st.markdown("##### 📄 Extracted Data")
+        for res in st.session_state.get("last_results", []):
+            st.json(res)
+
+        st.markdown("---")
+
+        if st.button("🗑️ Clear All Data", type="primary"):
             from database.db import delete_all
             delete_all()
+            st.session_state["last_results"] = []   # 🔥 ADD THIS
             st.success("All data deleted!")
             st.rerun()
-
-for res in st.session_state.get("last_results", []):
-    st.json(res)
 
 # ----------------- DASHBOARD WITH DB -----------------
 df = get_all_transactions()

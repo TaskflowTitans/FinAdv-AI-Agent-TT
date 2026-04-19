@@ -94,79 +94,86 @@ def extract_with_tesseract(img_path):
     image = Image.open(img_path)
     image = ImageEnhance.Contrast(image).enhance(2)
     image = image.convert("L")
+    image = image.point(lambda x: 0 if x < 140 else 255, '1')
     custom_config = r'--oem 3 --psm 6'
 
     text = pytesseract.image_to_string(image, config=custom_config)
     print("\n===== OCR TEXT =====\n", text)
 
-    if "autopay" in text.lower() or "upi lite" in text.lower():
-        return {
-            "error": "Not a payment receipt"
-        }
-
     lines = text.split("\n")
     amount = 0
 
-    # 1️⃣ PRIORITY: "Up to ₹2000" OR "₹2000"
     for line in lines:
-        if "up to" in line.lower() or "₹" in line:
-            match = re.search(r"\d{2,6}", line)
+        match = re.search(r"\d{1,3}(,\d{3})+", line)
+        if match:
+            amount = float(match.group().replace(",", ""))
+            break
+        
+    is_autopay = "autopay" in text.lower() or "upi lite" in text.lower()
+
+    for line in lines:
+        if "up to" in line.lower() or "₹" in line or "€" in line:
+            match = re.search(r"\b\d{2,6}\b", line)
             if match:
                 amount = float(match.group())
                 break
 
-    # 2️⃣ PRIORITY: largest realistic number near currency context
+    # 🔥 RULE 1: "₹500" or "₹ 500"
+    for line in lines:
+        match = re.search(r"[₹]\s?(\d+[,\d]*)", line)
+        if match:
+            amount = float(match.group(1).replace(",", ""))
+            break
+
+    # 🔥 RULE 2: BIG NUMBER (center text like 26,200)
     if amount == 0:
-        candidates = []
-
         for line in lines:
-            nums = re.findall(r"\d{2,6}", line)
-            for num in nums:
-                val = float(num)
+            match = re.search(r"\d{1,3}(,\d{3})+", line)
+            if match:
+                amount = float(match.group().replace(",", ""))
+                break
 
-                # ignore obvious noise (dates, time, etc.)
-                if 50 <= val <= 50000:
-                    candidates.append(val)
-
-        if candidates:
-            # Prefer values close to detected "up to" context
-            candidates = sorted(candidates)
-
-            # pick smallest reasonable (NOT largest)
-            amount = candidates[0]
+    # 🔥 RULE 3: Payment screen fallback (ONLY if contains "paid" or "completed")
+    if amount == 0:
+        for line in lines:
+            if "paid" in line.lower() or "completed" in line.lower():
+                match = re.search(r"\d{3,6}", line)
+                if match:
+                    val = int(match.group())
+                    if val > 100:   # ignore 91, 30 etc
+                        amount = val
+                        break
+        
 
     # -------- DATE (ALWAYS DEFINE) --------
     date = None
 
-    date_patterns = [
-        r"\d{2}[/-]\d{2}[/-]\d{4}",
-        r"\d{1,2}\s\w+\s\d{4}"   # e.g. 18 Apr 2026
-    ]
+    date_match = re.search(r"\d{1,2}\s\w+\s\d{4}", text)
 
-    for pattern in date_patterns:
-        match = re.search(pattern, text)
-        if match:
-            date = match.group()
-            break
+    if date_match:
+        try:
+            date = datetime.strptime(date_match.group(), "%d %b %Y").strftime("%Y-%m-%d")
+        except:
+            pass
 
-    try:
-        date = datetime.strptime(date, "%d %b %Y").strftime("%Y-%m-%d")
-    except:
-        pass
-
-    # -------- MERCHANT (ALWAYS DEFINE) --------
+        # -------- MERCHANT (ALWAYS DEFINE) --------
     merchant = "Unknown"
+
     for line in lines:
         if line.lower().startswith("to"):
-            merchant = line.replace("To:", "").strip()
+            merchant = re.sub(r"to[:\s]*", "", line, flags=re.IGNORECASE).strip()
+
+            # remove noise words
+            merchant = re.sub(r"paytm|bank|payments", "", merchant, flags=re.IGNORECASE).strip()
             break
 
-    
     # -------- SENDER (PAYER) --------
     sender = "Unknown"
+
     for line in lines:
         if line.lower().startswith("from"):
-            sender = line.replace("From:", "").replace("@", "").strip()
+            sender = re.sub(r"from[:\s]*", "", line, flags=re.IGNORECASE)
+            sender = sender.replace("@", "").strip()
             break
 
     if amount == 0:
@@ -184,5 +191,6 @@ def extract_with_tesseract(img_path):
         "date": date,
         "description": merchant,
         "sender": sender,
-        "currency": "INR"
+        "currency": "INR",
+        "note": "autopay_detected" if is_autopay else "payment"
     }
