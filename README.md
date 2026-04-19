@@ -13,8 +13,6 @@ TitansLedger – Financial AI Agent is an AI-powered system designed to automati
 Create a New Folder in your Local<br>
 1. Open that New Folder in VS Code and clone the Repo
 
-<br>
-
 ```bash
 git clone https://github.com/TaskflowTitans/FinAdv-AI-Agent-TT.git
 ```
@@ -23,34 +21,33 @@ git clone https://github.com/TaskflowTitans/FinAdv-AI-Agent-TT.git
 
 2. Change directory
 
-<br>
-
 ```bash
 cd .\FinAdv-AI-Agent-TT\
 ```
 
 <br>
 
-3. Install the Virtual Environment <br>
+3. Install the Virtual Environment
+
 ```bash
 python -m venv venv
 ```
 
 <br>
 
-4. Activate the Virtual Env (For Windows) <br>
+4. Activate the Virtual Env (For Windows)
+
 ```bash
 venv\scripts\activate
 ```
 
 <br>
 
-5. Install the requirements from requirements.txt <br>
+5. Install the requirements from requirements.txt
+
 ```bash
 pip install -r requirements.txt
 ```
-
-<br>
 
 <br>
 
@@ -104,8 +101,6 @@ Image → Tesseract OCR → Regex Parsing → Structured Data
 
 During testing with real Indian UPI payment screenshots (Google Pay, PhonePe, Paytm), several issues were observed:
 
-<br>
-
 ‣ Inconsistent text alignment in screenshots <br>
 
 ‣ Mixed fonts and UI overlays <br>
@@ -131,20 +126,26 @@ This resulted in :
 ```bash
 Image → Azure Computer Vision → Raw Text
 ```
+
        ↓
+
 ```bash
 Gemini (optional cleanup)
 ```
+
        ↓
+
 ```bash
 Fallback Parser (if API fails)
 ```
+
        ↓
+
 ```bash
 Structured JSON → Dashboard → Guru Advice
 ```
 
-```md
+
 ## 🚀 Key Features
 
 - 📄 Receipt Upload & OCR Extraction (Azure Vision) <br>
@@ -156,11 +157,11 @@ Structured JSON → Dashboard → Guru Advice
 - 🧘 Guru-Based Financial Advice (Chanakya & Vidura) <br>
 - ⚠️ Confidence Indicator (AI vs fallback transparency) <br>
 - 📥 CSV Export <br>
-```
+
 
 ## Running the Streamlit App
 
-NOTE: App is still in development, it will output only dictionaries of uploaded payment recipts. <br>
+NOTE : App is still in development, it will output only dictionaries of uploaded payment recipts. <br>
 
 After Cloning the Github Repository and installing the requirements, run the following commands to run the app (make sure you are in FinAdv-AI-Agent-TT folder) : <br>
 
