@@ -1,7 +1,8 @@
 from langchain.tools import tool
 import json
 # from tools.ocr import extract_with_gemini_vision
-from tools.ocr import extract_with_tesseract
+# from tools.ocr import extract_with_tesseract
+from tools.ocr import extract_with_google_pipeline
 
 @tool
 def ocr_extraction_tool(image_path: str) -> str:
@@ -11,7 +12,7 @@ def ocr_extraction_tool(image_path: str) -> str:
     Output: JSON string
     """
 
-    data = extract_with_tesseract(image_path)
+    data = extract_with_google_pipeline(image_path)
 
     if not data:
         return json.dumps({"error": "Extraction failed"})

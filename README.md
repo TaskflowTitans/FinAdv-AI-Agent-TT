@@ -58,13 +58,27 @@ Doing All this Steps will install you the Virtual Environment of our Project in 
 
 <br>
 
-#### Integrate API Keys in your Local
+### Integrate API Keys in your Local
 
-Create a .env file in \FINADV-AI-Agent-TT\ folder which stores the Gemini and OpenAI API Keys as:
-<br>
-GEMINI_API_KEY = key_here <br>
-OPENAI_API_KEY = key_here
+#### 🔑 API Configuration (IMPORTANT)
 
+This project uses a hybrid AI pipeline:
+
+- **Azure Computer Vision (OCR)** → for text extraction
+- **Gemini (optional)** → for AI-based text cleanup
+- **Fallback Parser** → ensures the app works even without API limits
+
+---
+
+### 🟢 Required Setup (Minimum)
+
+Create a `.env` file in the root directory:
+
+```env
+GEMINI_API_KEY = your_gemini_key
+AZURE_VISION_KEY = your_azure_key
+AZURE_VISION_ENDPOINT = https://your-endpoint.cognitiveservices.azure.com/
+```
 <br>
 
 ## 🔍 OCR Strategy & Design Decision
@@ -112,27 +126,37 @@ This resulted in :
 
 ‣ Manual correction requirements <br>
 
-## 🚀Improved Approach: Gemini Vision
-
-To improve reliability and accuracy, the OCR-based extraction was replaced with:
-
-<br>
-
-Google Gemini Vision model <br>
-
-Updated pipeline:
+### Final Architecture
 
 ```bash
-Image → Gemini Vision → Structured JSON Extraction
+Image → Azure Computer Vision → Raw Text
+```
+       ↓
+```bash
+Gemini (optional cleanup)
+```
+       ↓
+```bash
+Fallback Parser (if API fails)
+```
+       ↓
+```bash
+Structured JSON → Dashboard → Guru Advice
 ```
 
-Instead of relying on raw OCR + regex rules, Gemini Vision performs: <br>
+```md
+## 🚀 Key Features
 
-‣ Context-aware text recognition <br>
-
-‣ Semantic understanding of financial screenshots <br>
-
-‣ Direct structured JSON output generation. <br>
+- 📄 Receipt Upload & OCR Extraction (Azure Vision) <br>
+- 🧠 AI Cleanup with Gemini (optional) <br>
+- 🔁 Fallback Extraction (no API dependency) <br>
+- ✏️ Manual Transaction Correction (user verification) <br>
+- 📊 Expense Dashboard with Charts & Insights <br> 
+- 🇮🇳 UPI-Aware Processing (Indian payments support) <br>
+- 🧘 Guru-Based Financial Advice (Chanakya & Vidura) <br>
+- ⚠️ Confidence Indicator (AI vs fallback transparency) <br>
+- 📥 CSV Export <br>
+```
 
 ## Running the Streamlit App
 
@@ -185,6 +209,10 @@ The application is optimized for high-performance receipt processing. However, d
 ‣ LangChain <br>
 ‣ Google Gemini Vision <br>
 ‣ Pandas <br>
+‣ Streamlit <br>
+‣ Azure Computer Vision (OCR) <br>
+‣ Google Gemini (optional LLM) <br>
+‣ Plotly <br>
 
 ## Team Members
 
@@ -192,3 +220,13 @@ The application is optimized for high-performance receipt processing. However, d
 ‣ Diya <br>
 ‣ Heer <br>
 ‣ Sanjay <br>
+
+## ⚠️ Reliability & Demo Design
+
+This application is designed for **robust real-world performance**:
+
+- Works with or without API keys <br>
+- Automatically switches to fallback mode if APIs fail <br>
+- Includes manual correction to ensure data accuracy <br>
+
+This ensures judges can evaluate the system smoothly under any conditions.

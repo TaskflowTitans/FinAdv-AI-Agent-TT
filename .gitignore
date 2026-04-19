@@ -4,3 +4,4 @@ __pycache__/
 *.db
 venv/
 .DS_Store
+config/google_vision_key.json

@@ -14,7 +14,7 @@ from database.db import init_db, insert_transaction, get_all_transactions
 import plotly.express as px
 from auth import login, signup, logout
 import tempfile
-from tools.ocr import extract_with_tesseract
+# from tools.ocr import extract_with_tesseract
 from data.categories import categorize
 from agents.extraction_agent import ExtractionAgent
 from utils.image_utils import convert_to_base64
@@ -47,6 +47,9 @@ if not st.session_state["logged_in"]:
         signup()
 
     st.stop()
+
+if "guru" not in st.session_state:
+    st.session_state["guru"] = None
 
 # Sidebar after login
 col1, col2 = st.columns([6, 2])
@@ -119,8 +122,6 @@ def clean_result(result):
 
     return result
 
-used_fallback = False
-
 if uploaded_files:
     # Small side preview for the image (col1) and data actions (col2)
     col1, col2 = st.columns([1, 3])
@@ -136,9 +137,10 @@ if uploaded_files:
         if st.button("🔍 Extract Transactions", key="multi_extract"):
             st.session_state["last_results"] = []
             all_results = []
+            used_fallback = False
             progress = st.progress(0)
 
-            with st.spinner("Processing with OCR..."):
+            with st.spinner("Processing with AI Vision..."):
                 for i, file in enumerate(uploaded_files):
                     if i > 0:
                         time.sleep(1)
@@ -147,7 +149,12 @@ if uploaded_files:
                         tmp.write(file.read())
                         tmp_path = tmp.name
 
-                    result = extract_with_tesseract(tmp_path)
+                    # result = extract_with_tesseract(tmp_path)
+                    base64_img = convert_to_base64(tmp_path)
+                    result = extraction_agent.extract(base64_img)
+
+                    if result.get("fallback"):
+                        used_fallback = True
 
                     st.session_state["last_results"].append(result)
 
@@ -162,30 +169,65 @@ if uploaded_files:
                         continue
 
                     merchant = result.get("description", "Unknown")
+                    
+                    merchant_raw = result.get("description", "Unknown")
                     sender = result.get("sender", "Unknown")
 
+                    raw_text = merchant_raw.lower()
+
+                    for word in ["upi", "payment", "paid", "txn", "transaction"]:
+                        raw_text = raw_text.replace(word, "")
+
+                    raw_text = raw_text.replace("-", " ").replace("_", " ")
+
+                    if "to" in raw_text:
+                        raw_text = raw_text.split("to")[-1]
+
+                    merchant = raw_text.strip().title()
+
+                    is_upi = False
+                    if any(x in str(result).lower() for x in ["upi", "@", "pay", "txn", "bank", "transfer"]):
+                        is_upi = True
+
+                    if is_upi:
+                        description = f"UPI • {sender} → {merchant}"
+                    else:
+                        description = f"{sender} → {merchant}"
+                    
                     formatted_data = {
                         "amount": amount,
                         "category": categorize(merchant),
                         "date": result.get("date") or str(datetime.today().date()),
-                        "description": f"{sender} → {merchant}"
+                        "description": description
                     }
 
-                    insert_transaction(formatted_data)
                     all_results.append(formatted_data)
+
+                    confidence = "high" if not result.get("fallback") else "low"
+                    result["confidence"] = confidence
 
                     progress.progress((i + 1) / len(uploaded_files))
 
             progress.empty()
 
             if all_results:
-                st.success(f"✅ Added {len(all_results)} transactions!")
+                st.session_state["pending_transactions"] = all_results
+                st.success(f"✅ Extracted {len(all_results)} transactions! (Review below before saving)" )
             else:
                 st.warning("⚠ No valid payment receipts found.")
 
         st.markdown("##### 📄 Extracted Data")
+
         for res in st.session_state.get("last_results", []):
+
+            if res.get("fallback"):
+                st.warning("⚠ Low confidence extraction (fallback used)")
+            else:
+                st.success("✅ High confidence extraction")
+
             st.json(res)
+            if "UPI" in res.get("description", "") or res.get("fallback") is not None:
+                st.caption("💳 UPI Transaction")
 
         st.markdown("---")
 
@@ -195,6 +237,70 @@ if uploaded_files:
             st.session_state["last_results"] = []   # 🔥 ADD THIS
             st.success("All data deleted!")
             st.rerun()
+
+# ----------------- MANUAL CORRECTION UI -----------------
+
+if st.session_state.get("pending_transactions"):
+
+    st.markdown("<br><hr><br>", unsafe_allow_html=True)
+    st.markdown("### ✏️ Review & Confirm Transactions")
+
+    st.info("Please review and correct the extracted data before saving.")
+
+    for i, txn in enumerate(st.session_state["pending_transactions"]):
+
+        st.markdown(f"#### Transaction {i+1}")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            amount = st.number_input(
+                f"Amount {i}",
+                value=float(txn["amount"]),
+                key=f"amount_{i}"
+            )
+
+            category = st.text_input(
+                f"Category {i}",
+                value=txn["category"],
+                key=f"category_{i}"
+            )
+
+        with col2:
+            date = st.text_input(
+                f"Date {i}",
+                value=txn["date"],
+                key=f"date_{i}"
+            )
+
+            description = st.text_input(
+                f"Description {i}",
+                value=txn["description"],
+                key=f"description_{i}"
+            )
+
+        st.markdown("---")
+
+    # ✅ Confirm button
+    if st.button("✅ Confirm & Save All", use_container_width=True):
+
+        for i, txn in enumerate(st.session_state["pending_transactions"]):
+
+            final_txn = {
+                "amount": float(st.session_state[f"amount_{i}"]),
+                "category": st.session_state[f"category_{i}"],
+                "date": st.session_state[f"date_{i}"],
+                "description": st.session_state[f"description_{i}"]
+            }
+
+            insert_transaction(final_txn)
+
+        st.success("✅ Transactions saved successfully!")
+
+        # clear pending
+        del st.session_state["pending_transactions"]
+
+        st.rerun()
 
 # ----------------- DASHBOARD WITH DB -----------------
 df = get_all_transactions()
@@ -220,7 +326,7 @@ if not df.empty:
         highest_txn = df["amount"].max()
 
         with col1:
-            st.metric("💰 Total", f"₹ {total_spent:,.2f}")
+            st.metric("💰 Total", f"₹{total_spent:,.2f}")
 
         with col2:
             st.metric("📅 Avg Spend", f"₹ {avg_spend:,.2f}")
@@ -328,50 +434,70 @@ with col2:
 if df.empty:
     st.info("👋 Upload receipts to start tracking your expenses.")
 st.markdown("<br><hr><br>", unsafe_allow_html=True)
-st.header("💡 AI Financial Insights")
+st.header("🧘 Choose Your Financial Guru")
+if st.session_state.get("guru") is None:
+    st.info("👆 Select a financial guru to see personalized advice.")
 
-try:
-        with st.spinner("Analyzing your spending with AI..."):
+# 👇 show only if data exists
+if not df.empty:
 
-            transactions = df.tail(50).to_dict(orient="records")
-            if not transactions:
-                st.info("No data available for analysis yet.")  
-            else:
-                analysis = analysis_agent.analyze(transactions)
-                
-                if "error" in analysis:
-                    st.error("Analysis failed")
-                else:
-                    st.markdown("### 🧠 AI Insights")
+    col1, col2 = st.columns(2)
 
-                    col1, col2, col3 = st.columns(3)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-                    with col1:
-                        st.metric("Top Category", analysis.get("top_category"))
+    with col1:
+        if st.button("🧠 Chanakya", use_container_width=True):
+            st.session_state["guru"] = "Chanakya"
 
-                    with col2:
-                        st.metric("Total Spent", f"₹{analysis.get('total_spent')}")
+    with col2:
+        if st.button("🌿 Vidura", use_container_width=True):
+            st.session_state["guru"] = "Vidura"
 
-                    with col3:
-                        st.metric("Average Spend", f"₹{analysis.get('average_spend')}")
+# 👇 Only show insights AFTER guru selection
+if st.session_state.get("guru") is not None and not df.empty:
 
-                    st.markdown("### 📊 Key Insights")
+    st.markdown(f"### 🧘 Insights guided by {st.session_state['guru']}")
 
-                    for insight in analysis.get("insights", []):
-                        st.info(insight)
+    if st.session_state["guru"] == "Chanakya":
+        st.warning("“A person should not be too honest. Straight trees are cut first.”")
 
-                    st.markdown("### 💡 Smart Financial Advice")
-                    advice = advisor_agent.advise(analysis)
+    elif st.session_state["guru"] == "Vidura":
+        st.info("“True wisdom lies in balance, restraint, and righteous action.”")
 
-                    for line in advice.split("\n"):
-                        if line.strip():
-                            st.success(line)
+    transactions = df.tail(50).to_dict(orient="records")
+    analysis = analysis_agent.analyze(transactions)
 
-except Exception as e:
-        st.error("Error generating AI insights")
-        st.exception(e)
+    if "error" in analysis:
+        st.error("Analysis failed")
 
-if used_fallback:
+    else:
+        st.markdown("### 🧠 AI Insights")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Top Category", analysis.get("top_category"))
+
+        with col2:
+            st.metric("Total Spent", f"₹{analysis.get('total_spent')}")
+
+        with col3:
+            st.metric("Average Spend", f"₹{analysis.get('average_spend')}")
+
+        st.markdown("### 📊 Key Insights")
+
+        for insight in analysis.get("insights", []):
+            st.info(insight)
+
+        st.markdown("### 💡 Guru Advice")
+
+        advice = advisor_agent.advise(analysis, st.session_state["guru"])
+
+        for line in advice.split("\n"):
+            if line.strip():
+                st.success(line)
+
+if "used_fallback" in locals() and used_fallback:
     st.warning("⚠ Some receipts used OCR fallback (lower accuracy)")
 
 

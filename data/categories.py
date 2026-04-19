@@ -53,16 +53,35 @@ CATEGORIES = {
 }
 
 
-def categorize(description=None, bank_name=None, upi_id=None):
+def categorize(merchant: str) -> str:
 
-    text = " ".join([
-        str(description or ""),
-        str(bank_name or ""),
-        str(upi_id or "")
-    ]).lower()
+    if not merchant:
+        return "Others"
 
-    for category, keywords in CATEGORIES.items():
-        if any(keyword in text for keyword in keywords):
-            return category
+    merchant = merchant.lower()
 
-    return "uncategorized"
+    if any(x in merchant for x in ["swiggy", "zomato", "restaurant", "cafe", "food", "dominos", "pizza", "burger"]):
+        return "Food"
+
+    elif any(x in merchant for x in ["uber", "ola", "rapido", "transport", "taxi", "metro", "bus"]):
+        return "Transport"
+
+    elif any(x in merchant for x in ["mart", "store", "supermarket", "grocery", "bigbasket", "dmart", "reliance"]):
+        return "Groceries"
+
+    elif any(x in merchant for x in ["amazon", "flipkart", "myntra", "shopping", "store", "mall"]):
+        return "Shopping"
+
+    elif any(x in merchant for x in ["electricity", "bill", "recharge", "mobile", "internet", "wifi", "jio", "airtel", "vi"]):
+        return "Bills"
+
+    elif any(x in merchant for x in ["netflix", "prime", "hotstar", "spotify", "movie", "cinema"]):
+        return "Entertainment"
+
+    elif any(x in merchant for x in ["petrol", "fuel", "diesel", "hp", "indian oil", "bharat petroleum"]):
+        return "Fuel"
+
+    elif any(x in merchant for x in ["hospital", "pharmacy", "medical", "clinic"]):
+        return "Health"
+
+    return "Others"
