@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 import sys
-# allow importing from project root
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import time
 import tempfile
@@ -14,15 +13,15 @@ from database.db import init_db, insert_transaction, get_all_transactions
 import plotly.express as px
 from auth import login, signup, logout
 import tempfile
-# from tools.ocr import extract_with_tesseract
 from data.categories import categorize
 from agents.extraction_agent import ExtractionAgent
 from utils.image_utils import convert_to_base64
 from datetime import datetime
-extraction_agent = ExtractionAgent()
 from agents.analysis_agent import AnalysisAgent
-analysis_agent = AnalysisAgent()
 from agents.advisor_agent import AdvisorAgent
+from tools.financial_advisor import generate_financial_advice
+extraction_agent = ExtractionAgent()
+analysis_agent = AnalysisAgent()
 advisor_agent = AdvisorAgent()
 
 # PAGE CONFIG
@@ -439,6 +438,49 @@ if not df.empty:
         else:
                 st.success("No unusual spending detected 👍")
 
+                health_score = 100
+
+        st.markdown("### 📌 Summary")
+
+        st.info(
+            f"You have spent ₹{total_spent:.0f} across {len(df)} transactions. "
+            f"Your highest spending category is {top_category}, "
+            f"with an average transaction of ₹{avg_spend:.0f}."
+        )
+
+        if avg_spend > 1000:
+            health_score -= 20
+
+        if len(high_spend) > 0:
+            health_score -= 20
+
+        if top_category.lower() in ["food", "shopping"]:
+            health_score -= 15
+
+        health_score = max(0, health_score)
+
+        st.markdown("### 🧠 Financial Health Score")
+
+        st.progress(health_score / 100)
+
+        if health_score > 80:
+            st.success(f"Excellent financial health ({health_score}/100)")
+        elif health_score > 60:
+            st.info(f"Good financial health ({health_score}/100)")
+        else:
+            st.warning(f"Needs improvement ({health_score}/100)")
+
+        st.markdown("### 🚨 Key Problem Area")
+
+        if category_chart["amount"].max() > total_spent * 0.5:
+            problem_cat = category_chart.sort_values("amount", ascending=False).iloc[0]
+
+            st.error(
+                f"You are spending {problem_cat['amount']:.0f}₹ heavily on {problem_cat['category']}."
+            )
+        else:
+            st.success("No major spending issues detected 👍")
+
 # Spending Alerts
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -543,21 +585,95 @@ if st.session_state.get("guru") is not None and not df.empty:
 
         st.markdown("### 📊 Key Insights")
 
-        for insight in analysis.get("insights", []):
-            st.info(insight)
+        st.markdown("### 🧠 Smart Insights")
+
+        for i, insight in enumerate(analysis.get("insights", []), 1):
+            st.markdown(f"""
+            <div style="
+                padding:15px;
+                border-radius:10px;
+                background:rgba(56,189,248,0.08);
+                border:1px solid rgba(56,189,248,0.3);
+                margin-bottom:10px;">
+                <b>Insight {i}:</b> {insight}
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("### 💡 Guru Advice")
 
         advice = advisor_agent.advise(analysis, st.session_state["guru"])
-
         for line in advice.split("\n"):
             if line.strip():
-                st.markdown(f"- {line}")
+                st.markdown(f"<li>{line}</li>", unsafe_allow_html=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("""
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
 if st.session_state.get("used_fallback"):
     st.warning("⚠ Some receipts used OCR fallback (lower accuracy)")
+st.markdown("<br><hr><br>", unsafe_allow_html=True)
+
+if "chat_history" not in st.session_state:
+    st.session_state["chat_history"] = []
+
+if "show_history" not in st.session_state:
+    st.session_state["show_history"] = False
+
+st.markdown("<br><hr><br>", unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns([6, 1, 1])
+
+with col1:
+    st.header("💬 Chat With Your Finances")
+
+with col2:
+    if st.button("🗑 Clear"):
+        st.session_state["chat_history"] = []
+        st.success("Chat cleared")
+
+with col3:
+    if st.button("📜 History"):
+        st.session_state["show_history"] = not st.session_state["show_history"]
+
+user_query = st.text_input("Ask anything about your expenses...",
+    key="chat_input",
+    placeholder="e.g. Where am I overspending?")
+
+if user_query:
+    with st.spinner("Thinking..."):
+
+        transactions = df.tail(50).to_dict(orient="records")
+        analysis = analysis_agent.analyze(transactions)
+
+        try:
+            response = generate_financial_advice(df, analysis, user_query)
+
+            # ✅ store ONLY ONCE
+            st.session_state["chat_history"].append((user_query, response))
+
+            st.success(response)
+            st.session_state["chat_input"] = ""
+
+        except:
+            st.error("Failed to generate response.")
+
+if st.session_state["show_history"] and st.session_state["chat_history"]:
+
+    st.markdown("### 📜 Chat History")
+
+    for q, r in reversed(st.session_state["chat_history"]):
+        st.markdown(f"""
+        <div style="
+            padding:10px;
+            border-radius:8px;
+            background:rgba(255,255,255,0.03);
+            margin-bottom:10px;">
+            <b>🧑 You:</b> {q}<br>
+            <b>🤖 AI:</b> {r}
+        </div>
+        """, unsafe_allow_html=True)
     
 st.markdown("---")
 st.markdown("### 📌 About TitansLedger")

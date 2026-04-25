@@ -99,113 +99,6 @@ def extract_json_from_response(text):
     print(text)
     return None
 
-# def extract_with_tesseract(img_path):
-
-#     image = Image.open(img_path)
-#     image = ImageEnhance.Contrast(image).enhance(2)
-#     image = image.convert("L")
-#     image = image.point(lambda x: 0 if x < 140 else 255, '1')
-#     custom_config = r'--oem 3 --psm 6'
-
-#     text = pytesseract.image_to_string(image, config=custom_config)
-#     print("\n===== OCR TEXT =====\n", text)
-
-#     lines = text.split("\n")
-#     amount = 0
-
-#     for line in lines:
-#         match = re.search(r"\d{1,3}(,\d{3})+", line)
-#         if match:
-#             amount = float(match.group().replace(",", ""))
-#             break
-        
-#     is_autopay = "autopay" in text.lower() or "upi lite" in text.lower()
-
-#     for line in lines:
-#         if "up to" in line.lower() or "₹" in line or "€" in line:
-#             match = re.search(r"\b\d{2,6}\b", line)
-#             if match:
-#                 amount = float(match.group())
-#                 break
-
-#     # 🔥 RULE 1: "₹500" or "₹ 500"
-#     for line in lines:
-#         match = re.search(r"[₹]\s?(\d+[,\d]*)", line)
-#         if match:
-#             amount = float(match.group(1).replace(",", ""))
-#             break
-
-#     # 🔥 RULE 2: BIG NUMBER (center text like 26,200)
-#     if amount == 0:
-#         for line in lines:
-#             match = re.search(r"\d{1,3}(,\d{3})+", line)
-#             if match:
-#                 amount = float(match.group().replace(",", ""))
-#                 break
-
-#     # 🔥 RULE 3: Payment screen fallback (ONLY if contains "paid" or "completed")
-#     if amount == 0:
-#         for line in lines:
-#             if "paid" in line.lower() or "completed" in line.lower():
-#                 match = re.search(r"\d{3,6}", line)
-#                 if match:
-#                     val = int(match.group())
-#                     if val > 100:   # ignore 91, 30 etc
-#                         amount = val
-#                         break
-        
-
-#     # -------- DATE (ALWAYS DEFINE) --------
-#     date = None
-
-#     date_match = re.search(r"\d{1,2}\s\w+\s\d{4}", text)
-
-#     if date_match:
-#         try:
-#             date = datetime.strptime(date_match.group(), "%d %b %Y").strftime("%Y-%m-%d")
-#         except:
-#             pass
-
-#         # -------- MERCHANT (ALWAYS DEFINE) --------
-#     merchant = "Unknown"
-
-#     for line in lines:
-#         if line.lower().startswith("to"):
-#             merchant = re.sub(r"to[:\s]*", "", line, flags=re.IGNORECASE).strip()
-
-#             # remove noise words
-#             merchant = re.sub(r"paytm|bank|payments", "", merchant, flags=re.IGNORECASE).strip()
-#             break
-
-#     # -------- SENDER (PAYER) --------
-#     sender = "Unknown"
-
-#     for line in lines:
-#         if line.lower().startswith("from"):
-#             sender = re.sub(r"from[:\s]*", "", line, flags=re.IGNORECASE)
-#             sender = sender.replace("@", "").strip()
-#             break
-
-#     if amount == 0:
-#         print("⚠ No reliable amount found")
-#         return {
-#             "amount": 0,
-#             "date": None,
-#             "description": "Unknown",
-#             "sender": "Unknown",
-#             "currency": "INR"
-#         }
-    
-#     return {
-#         "amount": amount,
-#         "date": date,
-#         "description": merchant,
-#         "sender": sender,
-#         "currency": "INR",
-#         "note": "autopay_detected" if is_autopay else "payment"
-#     }
-
-
 def extract_with_google_vision(image_path):
     client = vision.ImageAnnotatorClient()
 
@@ -273,40 +166,54 @@ def fallback_parser(text):
         "fallback": True
     }
 
+def calculate_confidence(data):
+    score = 0
+
+    if data.get("amount") and data["amount"] > 0:
+        score += 0.4
+
+    if data.get("date"):
+        score += 0.2
+
+    if data.get("description") and data["description"] != "Unknown":
+        score += 0.2
+
+    if data.get("sender") and data["sender"] != "Unknown":
+        score += 0.2
+
+    return round(score, 2)
+
 def clean_text_to_json(text):
 
     try:
         llm = get_llm()
 
         prompt = f"""
-        You are a strict receipt parser.
+        Extract structured data from this receipt.
 
-        Extract:
-        - amount (number only)
-        - date (YYYY-MM-DD)
-        - description (merchant)
-        - sender
-        - currency (INR)
+        STRICT RULES:
+        - Return ONLY valid JSON
+        - No markdown
+        - No explanation
+        - Keys: amount (number), date (YYYY-MM-DD), description, sender, currency
 
         Text:
         {text}
-
-        Return ONLY valid JSON.
         """
 
         response = llm.invoke(prompt)
 
-        import re, json
-
         content = response.content
-        content = content.replace("```json", "").replace("```", "")
 
-        match = re.search(r"\{.*\}", content, re.DOTALL)
+        # ✅ USE YOUR OWN JSON CLEANER HERE
+        parsed = extract_json_from_response(content)
 
-        if match:
-            return json.loads(match.group(0))
+        if parsed:
+            parsed["fallback"] = False
+            return parsed
 
-        return {"error": "Invalid JSON"}
+        # fallback if parsing fails
+        return fallback_parser(text)
 
     except Exception as e:
         print("⚠ Gemini failed:", e)
@@ -374,5 +281,8 @@ def extract_with_azure_pipeline(image_path):
         return ocr_result
 
     cleaned = clean_text_to_json(ocr_result["raw_text"])
+
+    if "confidence_score" not in cleaned:
+        cleaned["confidence_score"] = calculate_confidence(cleaned)
 
     return cleaned

@@ -1,6 +1,6 @@
 class AdvisorAgent:
 
-    def advise(self, analysis: dict, guru: str):
+    def advise(self, analysis, guru):
 
         if "error" in analysis:
             return "No advice available."

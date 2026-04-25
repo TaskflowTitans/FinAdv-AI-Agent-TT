@@ -11,30 +11,30 @@ from tools.ocr import extract_with_azure_pipeline
 # from tools.ocr import extract_with_google_pipeline
 
 class ExtractionAgent:
-    def __init__(self):
-        pass
-
     def extract(self, image_bytes):
 
-        try:
-            # convert base64 → image
-            img_data = base64.b64decode(image_bytes.split(",")[-1])
+        last_error = None
 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-                tmp.write(img_data)
-                temp_path = tmp.name
+        for attempt in range(2):  # retry once
 
-            result = extract_with_azure_pipeline(temp_path)
+            try:
+                img_data = base64.b64decode(image_bytes.split(",")[-1])
 
-            if (
-                "error" in result
-                or not result.get("amount")
-                or result.get("amount") == 0
-                or result.get("description") in ["Unknown", "", None]
-            ):
-                return {"error": "Low confidence extraction"}
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                    tmp.write(img_data)
+                    temp_path = tmp.name
 
-            return result
+                result = extract_with_azure_pipeline(temp_path)
 
-        except Exception as e:
-            return {"error": str(e)}
+                if "error" not in result:
+                    confidence = result.get("confidence_score", 0)
+
+                    if confidence < 0.5:
+                        result["warning"] = "Low confidence extraction"
+
+                    return result
+
+            except Exception as e:
+                last_error = str(e)
+
+        return {"error": last_error or "Extraction failed"}

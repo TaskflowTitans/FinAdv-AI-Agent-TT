@@ -23,7 +23,7 @@ fallback_llm = ChatGroq(
 def call_primary_llm(prompt):
     return llm.invoke(prompt)
 
-def generate_financial_advice(df):
+def generate_financial_advice(df, analysis, user_query=None):
     if df.empty:
         return "No data available."
 
@@ -31,17 +31,29 @@ def generate_financial_advice(df):
     data = df.to_dict(orient="records")
 
     prompt = f"""
-    Act like a strict financial coach.
+    You are a financial AI assistant.
 
-    User expense data:
+    User question:
+    {user_query}
+
+    User transaction data:
     {data}
 
-    Rules:
-    - Be honest and critical
-    - Give practical saving advice
-    - Highlight unnecessary spending
+    Analysis:
+    Top category: {analysis.get("top_category")}
+    Total spent: {analysis.get("total_spent")}
+    Average spend: {analysis.get("average_spend")}
+    Behavior: {analysis.get("behavior")}
+    Insights: {analysis.get("insights")}
 
-    Output in bullet points.
+    Your job:
+    - Answer the user's question
+    - Use data to justify answers
+    - Give actionable advice
+
+    Rules:
+    - Be clear and specific
+    - No generic advice
     """
 
     # response = llm.invoke(prompt)
