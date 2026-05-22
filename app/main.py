@@ -17,11 +17,11 @@ from data.categories import categorize
 from agents.extraction_agent import ExtractionAgent
 from utils.image_utils import convert_to_base64
 from datetime import datetime
-from agents.analysis_agent import AnalysisAgent
+# from agents.analysis_agent import AnalysisAgent
 from agents.advisor_agent import AdvisorAgent
 from tools.financial_advisor import generate_financial_advice
 extraction_agent = ExtractionAgent()
-analysis_agent = AnalysisAgent()
+# analysis_agent = AnalysisAgent()
 advisor_agent = AdvisorAgent()
 
 # PAGE CONFIG
@@ -191,9 +191,16 @@ if uploaded_files:
 
                     amount = float(result.get("amount", 0))
 
+                    # if amount <= 0:
+                    #     st.warning(f"⚠ Skipping invalid transaction: {file.name}")
+                    #     continue
                     if amount <= 0:
-                        st.warning(f"⚠ Skipping invalid transaction: {file.name}")
-                        continue
+
+                        st.warning(
+                            f"⚠ Amount not detected properly for {file.name}. Please review manually."
+                        )
+                        result["needs_review"] = True
+                        amount = 0
 
                     merchant = result.get("description", "Unknown")
                     
@@ -255,6 +262,8 @@ if uploaded_files:
                 st.success("✅ High confidence extraction")
 
             st.json(res)
+            with st.expander("📄 Raw OCR Text"):
+                st.text(res.get("raw_text", ""))
             if res.get("is_upi"):
                 st.caption("💳 UPI Transaction")
 
@@ -438,7 +447,7 @@ if not df.empty:
         else:
                 st.success("No unusual spending detected 👍")
 
-                health_score = 100
+        health_score = 100
 
         st.markdown("### 📌 Summary")
 
