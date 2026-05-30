@@ -17,7 +17,7 @@ from data.categories import categorize
 from agents.extraction_agent import ExtractionAgent
 from utils.image_utils import convert_to_base64
 from datetime import datetime
-# from agents.analysis_agent import AnalysisAgent
+from agents.analysis_agent import analyze
 from agents.advisor_agent import AdvisorAgent
 from tools.financial_advisor import generate_financial_advice
 extraction_agent = ExtractionAgent()
@@ -27,7 +27,7 @@ advisor_agent = AdvisorAgent()
 # PAGE CONFIG
 st.set_page_config(
     page_title="TitansLedger - Ultimate AI Expense Tracker",
-    page_icon="💰",
+    page_icon="../Taskflow Titans Logo.png",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -547,7 +547,7 @@ if not df.empty:
     if st.button("⚖ Compare Gurus", use_container_width=True):
 
         transactions = df.tail(50).to_dict(orient="records")
-        analysis = analysis_agent.analyze(transactions)
+        analysis = analyze(transactions)
 
         col1, col2 = st.columns(2)
 
@@ -573,7 +573,7 @@ if st.session_state.get("guru") is not None and not df.empty:
         st.info("“True wisdom lies in balance, restraint, and righteous action.”")
 
     transactions = df.tail(50).to_dict(orient="records")
-    analysis = analysis_agent.analyze(transactions)
+    analysis = analyze(transactions)
 
     if "error" in analysis:
         st.error("Analysis failed")
@@ -654,7 +654,7 @@ if user_query:
     with st.spinner("Thinking..."):
 
         transactions = df.tail(50).to_dict(orient="records")
-        analysis = analysis_agent.analyze(transactions)
+        analysis = analyze(transactions)
 
         try:
             response = generate_financial_advice(df, analysis, user_query)
