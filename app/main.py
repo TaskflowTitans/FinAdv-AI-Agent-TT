@@ -21,7 +21,6 @@ from agents.analysis_agent import analyze
 from agents.advisor_agent import AdvisorAgent
 from tools.financial_advisor import generate_financial_advice
 extraction_agent = ExtractionAgent()
-# analysis_agent = AnalysisAgent()
 advisor_agent = AdvisorAgent()
 
 # PAGE CONFIG
@@ -307,9 +306,24 @@ if uploaded_files:
                     
                     formatted_data = {
                         "amount": amount,
+
                         "category": categorize(merchant),
+
                         "date": result.get("date") or str(datetime.today().date()),
-                        "description": description
+
+                        "description": description,
+
+                        "sender": result.get("sender"),
+
+                        "upi_id": result.get("upi_id"),
+
+                        "bank_name": result.get("bank_name"),
+
+                        "transaction_id": result.get("transaction_id"),
+
+                        "receipt_type": result.get("receipt_type"),
+
+                        "confidence_score": result.get("confidence_score")
                     }
 
                     all_results.append(formatted_data)
@@ -406,9 +420,24 @@ if st.session_state.get("pending_transactions"):
 
             final_txn = {
                 "amount": float(st.session_state[f"amount_{i}"]),
+
                 "category": st.session_state[f"category_{i}"],
+
                 "date": st.session_state[f"date_{i}"],
-                "description": st.session_state[f"description_{i}"]
+
+                "description": st.session_state[f"description_{i}"],
+
+                "sender": txn.get("sender"),
+
+                "upi_id": txn.get("upi_id"),
+
+                "bank_name": txn.get("bank_name"),
+
+                "transaction_id": txn.get("transaction_id"),
+
+                "receipt_type": txn.get("receipt_type"),
+
+                "confidence_score": txn.get("confidence_score")
             }
 
             insert_transaction(final_txn)
