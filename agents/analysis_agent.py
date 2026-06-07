@@ -1,6 +1,6 @@
 import pandas as pd
 
-def analyze(self, transactions: list):
+def analyze(transactions: list):
     if not transactions:
         return {"error": "No transactions"}
 
@@ -14,23 +14,17 @@ def analyze(self, transactions: list):
     category_spend = df.groupby("category")["amount"].sum().sort_values(ascending=False)
     top_category = category_spend.idxmax()
 
-    # 🔥 NEW METRICS
     max_txn = df["amount"].max()
     min_txn = df["amount"].min()
 
-    # spending concentration
     top_category_pct = (category_spend.iloc[0] / total_spent) * 100 if total_spent > 0 else 0
 
-    # daily pattern
     daily_spend = df.groupby("date")["amount"].sum()
     high_spending_days = daily_spend[daily_spend > (1.5 * avg_spend)].index.tolist()
 
-    # category diversity
     category_count = df["category"].nunique()
 
     insights = []
-
-    # 🔥 INTELLIGENT INSIGHTS
 
     if top_category_pct > 50:
         insights.append(f"You are heavily spending on {top_category} ({top_category_pct:.1f}%). Consider balancing your expenses.")
@@ -47,7 +41,6 @@ def analyze(self, transactions: list):
     if avg_spend > 1000:
         insights.append("Your average spending is quite high relative to typical users.")
 
-    # 🔥 BEHAVIOR TAGS (VERY POWERFUL)
     behavior = []
 
     if top_category.lower() in ["food", "shopping"]:

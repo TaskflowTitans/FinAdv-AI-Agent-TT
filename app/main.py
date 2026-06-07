@@ -17,11 +17,10 @@ from data.categories import categorize
 from agents.extraction_agent import ExtractionAgent
 from utils.image_utils import convert_to_base64
 from datetime import datetime
-from agents.analysis_agent import AnalysisAgent
+from agents.analysis_agent import analyze
 from agents.advisor_agent import AdvisorAgent
 from tools.financial_advisor import generate_financial_advice
 extraction_agent = ExtractionAgent()
-analysis_agent = AnalysisAgent()
 advisor_agent = AdvisorAgent()
 
 # PAGE CONFIG
@@ -223,9 +222,24 @@ if uploaded_files:
                     
                     formatted_data = {
                         "amount": amount,
+
                         "category": categorize(merchant),
+
                         "date": result.get("date") or str(datetime.today().date()),
-                        "description": description
+
+                        "description": description,
+
+                        "sender": result.get("sender"),
+
+                        "upi_id": result.get("upi_id"),
+
+                        "bank_name": result.get("bank_name"),
+
+                        "transaction_id": result.get("transaction_id"),
+
+                        "receipt_type": result.get("receipt_type"),
+
+                        "confidence_score": result.get("confidence_score")
                     }
 
                     all_results.append(formatted_data)
@@ -317,9 +331,24 @@ if st.session_state.get("pending_transactions"):
 
             final_txn = {
                 "amount": float(st.session_state[f"amount_{i}"]),
+
                 "category": st.session_state[f"category_{i}"],
+
                 "date": st.session_state[f"date_{i}"],
-                "description": st.session_state[f"description_{i}"]
+
+                "description": st.session_state[f"description_{i}"],
+
+                "sender": txn.get("sender"),
+
+                "upi_id": txn.get("upi_id"),
+
+                "bank_name": txn.get("bank_name"),
+
+                "transaction_id": txn.get("transaction_id"),
+
+                "receipt_type": txn.get("receipt_type"),
+
+                "confidence_score": txn.get("confidence_score")
             }
 
             insert_transaction(final_txn)
@@ -538,7 +567,7 @@ if not df.empty:
     if st.button("⚖ Compare Gurus", use_container_width=True):
 
         transactions = df.tail(50).to_dict(orient="records")
-        analysis = analysis_agent.analyze(transactions)
+        analysis = analyze(transactions)
 
         col1, col2 = st.columns(2)
 
@@ -564,7 +593,7 @@ if st.session_state.get("guru") is not None and not df.empty:
         st.info("“True wisdom lies in balance, restraint, and righteous action.”")
 
     transactions = df.tail(50).to_dict(orient="records")
-    analysis = analysis_agent.analyze(transactions)
+    analysis = analyze(transactions)
 
     if "error" in analysis:
         st.error("Analysis failed")
@@ -645,7 +674,7 @@ if user_query:
     with st.spinner("Thinking..."):
 
         transactions = df.tail(50).to_dict(orient="records")
-        analysis = analysis_agent.analyze(transactions)
+        analysis = analyze(transactions)
 
         try:
             response = generate_financial_advice(df, analysis, user_query)
