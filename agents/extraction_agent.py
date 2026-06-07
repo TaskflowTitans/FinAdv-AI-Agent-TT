@@ -1,7 +1,7 @@
 import os
 import json
 import time
-from langchain_google_genai import ChatGoogleGenerativeAI
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from google.api_core import exceptions
 # from tools.ocr import extract_with_tesseract
@@ -25,6 +25,9 @@ class ExtractionAgent:
                     temp_path = tmp.name
 
                 result = extract_with_azure_pipeline(temp_path)
+
+                if result.get("raw_text"):
+                    return result
 
                 if "error" not in result:
                     confidence = result.get("confidence_score", 0)

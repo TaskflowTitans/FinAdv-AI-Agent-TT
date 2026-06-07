@@ -1,14 +1,12 @@
 from dotenv import load_dotenv
 import os
-# import cv2
 import pytesseract
 from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageFilter
 import re
 import base64
 import json 
-# from tenacity import retry, stop_after_attempt, wait_exponential
 from datetime import datetime
-# from langchain_openai import ChatOpenAI
 from google.cloud import vision
 from langchain_google_genai import ChatGoogleGenerativeAI
 import io
@@ -31,46 +29,7 @@ if os.name == "nt":
     pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 else:
     pytesseract.pytesseract.tesseract_cmd = "tesseract"
-    
-# To Show Image
-
-# def show_image(img_path):
-#     image = cv2.imread(img_path)
-#     if image is None:
-#         print("Error: Could not read image. Check the file path.")
-#         return
-#     cv2.imshow("Image Window", image)
-#     cv2.waitKey(0)
-#     cv2.destroyAllWindows()
-
-# show_image("payment1.jpg")
-
-# With OCR
-
-# image_path = "data/samples/payment6.png"
-# image = cv2.imread(image_path)
-
-# image = cv2.resize(image, None, fx=1.5, fy=1.5)
-
-# gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-# gray = cv2.bilateralFilter(gray, 9, 75, 75)
-
-# _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-
-# custom_config = r'--oem 3 --psm 6'
-
-# text = pytesseract.image_to_string(thresh, config=custom_config)
-
-# print("\n===== RAW OCR TEXT =====\n")
-# print(text)
-
-# OCR is not working well for all samples, especially those with complex backgrounds and layouts.
-
-# pytesseract path for local
-
-# Do not remove this line, as it is necessary for pytesseract to work on Windows. Update the path if tesseract is installed elsewhere on your system. just comment it if you have a different path.
-
+ 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Update this path if tesseract is installed elsewhere
@@ -183,6 +142,226 @@ def calculate_confidence(data):
 
     return round(score, 2)
 
+AMOUNT_PATTERNS = [
+    r'Paid\s*₹\s?([\d,]+\.?\d*)',
+    r'₹\s?([\d,]+\.?\d*)',
+    r'Amount Paid\s*₹?\s?([\d,]+\.?\d*)',
+    r'Money Deposited.*?₹?\s?([\d,]+\.?\d*)',
+    r'₹\s?([\d,]+\.?\d*)',
+    r'Rs\.?\s?([\d,]+\.?\d*)',
+    r'INR\s?([\d,]+\.?\d*)',
+
+    r'Total\s*[:\-]?\s*([\d,]+\.?\d*)',
+    r'Grand Total\s*[:\-]?\s*([\d,]+\.?\d*)',
+    r'Amount\s*[:\-]?\s*([\d,]+\.?\d*)',
+    r'Paid\s*[:\-]?\s*([\d,]+\.?\d*)',
+    r'Sub Total\s*[:\-]?\s*([\d,]+\.?\d*)'
+]
+
+DATE_PATTERNS = [
+    r'\d{1,2}\s[A-Za-z]{3,9}\s\d{4}\s*\d{1,2}:\d{2}',
+    r'\d{1,2}/\d{1,2}/\d{2,4}',
+    r'\d{1,2}-\d{1,2}-\d{2,4}',
+    r'\d{1,2}\s[A-Za-z]{3,9}\s\d{2,4}'
+]
+
+MERCHANT_KEYWORDS = [
+    "paid to",
+    "sent to",
+    "to",
+    "merchant",
+    "receiver"
+]
+
+
+def extract_amount(text):
+
+    invoice_total = extract_invoice_total(text)
+
+    if invoice_total:
+        return invoice_total
+
+    amounts = []
+
+    for pattern in AMOUNT_PATTERNS:
+
+        matches = re.findall(pattern, text, re.IGNORECASE)
+
+        for match in matches:
+
+            try:
+                value = float(match.replace(",", ""))
+
+                if 1 <= value <= 100000:
+                    amounts.append(value)
+
+            except:
+                pass
+
+    if amounts:
+        return max(amounts)
+
+    return 0
+
+def extract_invoice_total(text):
+
+    lines = text.split("\n")
+
+    for i, line in enumerate(lines):
+
+        lower = line.lower().strip()
+
+        if lower in ["total", "grand total", "amount payable"]:
+
+            if i + 1 < len(lines):
+
+                next_line = lines[i + 1]
+
+                match = re.search(
+                    r'([\d,]+\.?\d*)',
+                    next_line
+                )
+
+                if match:
+
+                    try:
+                        return float(
+                            match.group(1).replace(",", "")
+                        )
+
+                    except:
+                        pass
+
+    return None
+
+def extract_date(text):
+
+    for pattern in DATE_PATTERNS:
+
+        matches = re.findall(pattern, text)
+
+        if matches:
+
+            raw_date = matches[0]
+
+            formats = [
+                "%d/%m/%Y",
+                "%d/%m/%y",
+                "%d-%m-%Y",
+                "%d-%m-%y",
+                "%d %b %Y",
+                "%d %B %Y",
+                "%d %b %Y %H:%M",
+                "%d %B %Y %H:%M"
+            ]
+
+            for fmt in formats:
+
+                try:
+                    parsed = datetime.strptime(raw_date, fmt)
+                    return parsed.strftime("%Y-%m-%d")
+
+                except:
+                    pass
+
+    return None
+
+
+def extract_merchant(text):
+
+    lines = text.split("\n")
+
+    for i, line in enumerate(lines):
+
+        lower = line.lower().strip()
+
+        if lower.startswith("paid to"):
+
+            if i + 1 < len(lines):
+                return lines[i + 1].strip()
+
+        if lower.startswith("sent to"):
+
+            if i + 1 < len(lines):
+                return lines[i + 1].strip()
+
+    return "Unknown"
+
+
+def detect_upi(text):
+
+    match = re.search(
+        r'[\w\.-]+@[\w]+',
+        text
+    )
+
+    if match:
+        return match.group()
+
+    return None
+
+def extract_sender(text):
+
+    lines = text.split("\n")
+
+    for i, line in enumerate(lines):
+
+        lower = line.lower().strip()
+
+        if lower in ["from", "sender"]:
+
+            if i + 1 < len(lines):
+                return lines[i + 1].strip()
+
+        if lower.startswith("from:"):
+            return line.split(":",1)[1].strip()
+
+    return "Unknown"
+
+def extract_transaction_id(text):
+
+    match = re.search(
+        r'(?:UPI Transaction ID|Transaction ID)\s*[:\-]?\s*(\d{8,20})',
+        text,
+        re.IGNORECASE
+    )
+
+    if match:
+        return match.group(1)
+
+    return None
+
+def smart_receipt_parser(text):
+
+    amount = extract_amount(text)
+
+    date = extract_date(text)
+
+    merchant = extract_merchant(text)
+
+    upi_id = detect_upi(text)
+
+    parsed = {
+        "amount": amount,
+        "date": date,
+        "description": merchant,
+        "sender": extract_sender(text),
+        "upi_id": upi_id,
+        "currency": "INR",
+        "fallback": False,
+        "transaction_id": extract_transaction_id(text)
+    }
+
+    parsed["confidence_score"] = calculate_confidence(parsed)
+
+    print("\n===== RAW OCR TEXT =====")
+    print(text)
+
+    print("\n===== PARSED RESULT =====")
+    print(parsed)
+
+    return parsed
+
 def clean_text_to_json(text):
 
     try:
@@ -205,14 +384,12 @@ def clean_text_to_json(text):
 
         content = response.content
 
-        # ✅ USE YOUR OWN JSON CLEANER HERE
         parsed = extract_json_from_response(content)
 
         if parsed:
             parsed["fallback"] = False
             return parsed
 
-        # fallback if parsing fails
         return fallback_parser(text)
 
     except Exception as e:
@@ -244,15 +421,25 @@ def extract_with_azure_vision(image_path):
     with open(image_path, "rb") as f:
         data = f.read()
 
-    response = requests.post(url, headers=headers, data=data)
+    for attempt in range(3):
+
+        response = requests.post(
+            url,
+            headers=headers,
+            data=data,
+            timeout=30
+        )
+
+        if response.status_code == 202:
+            break
+
+        time.sleep(2)
 
     if response.status_code != 202:
         return {"error": response.text}
 
-    # 🔥 Get operation URL
     operation_url = response.headers["Operation-Location"]
 
-    # 🔁 Poll result
     while True:
         result = requests.get(operation_url, headers={"Ocp-Apim-Subscription-Key": key}).json()
 
@@ -263,7 +450,6 @@ def extract_with_azure_vision(image_path):
 
         time.sleep(1)
 
-    # 🔥 Extract text
     lines = []
     for page in result["analyzeResult"]["readResults"]:
         for line in page["lines"]:
@@ -273,14 +459,95 @@ def extract_with_azure_vision(image_path):
 
     return {"raw_text": full_text}
 
+def preprocess_for_azure(image_path):
+
+    img = Image.open(image_path)
+
+    img = img.convert("L")
+
+    img = ImageEnhance.Contrast(img).enhance(1.5)
+
+    img = img.filter(ImageFilter.SHARPEN)
+
+    temp = image_path + "_clean.png"
+
+    img.save(temp)
+
+    return temp
+
+def detect_receipt_type(text):
+
+    raw = text.lower()
+
+    if "upi transaction id" in raw:
+        return "upi"
+
+    elif "google pay" in raw:
+        return "upi"
+
+    elif "phonepe" in raw:
+        return "upi"
+
+    elif "paytm" in raw:
+        return "upi"
+
+    elif "invoice" in raw:
+        return "invoice"
+
+    elif "gst" in raw:
+        return "gst_invoice"
+
+    elif "account number" in raw:
+        return "bank"
+
+    else:
+        return "generic"
+
+def parse_upi_receipt(text):
+
+    return {
+        "amount": extract_amount(text),
+        "date": extract_date(text),
+        "description": extract_merchant(text),
+        "sender": extract_sender(text),
+        "upi_id": detect_upi(text),
+        "transaction_id": extract_transaction_id(text),
+        "currency": "INR",
+        "fallback": False
+    }
+
 def extract_with_azure_pipeline(image_path):
 
-    ocr_result = extract_with_azure_vision(image_path)
+    clean_path = preprocess_for_azure(image_path)
+    ocr_result = extract_with_azure_vision(clean_path)
 
     if "error" in ocr_result:
         return ocr_result
 
-    cleaned = clean_text_to_json(ocr_result["raw_text"])
+    receipt_type = detect_receipt_type(
+        ocr_result["raw_text"]
+    )
+
+    if receipt_type == "upi":
+
+        cleaned = parse_upi_receipt(
+            ocr_result["raw_text"]
+        )
+    else:
+
+        cleaned = smart_receipt_parser(
+            ocr_result["raw_text"]
+        )
+
+    cleaned["receipt_type"] = receipt_type
+
+    if cleaned["amount"] <= 0:
+
+        return {
+            "error": "Amount extraction failed",
+            "raw_text": ocr_result["raw_text"]
+        }
+    cleaned["raw_text"] = ocr_result["raw_text"]
 
     if "confidence_score" not in cleaned:
         cleaned["confidence_score"] = calculate_confidence(cleaned)

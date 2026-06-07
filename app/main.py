@@ -26,15 +26,15 @@ advisor_agent = AdvisorAgent()
 # PAGE CONFIG
 st.set_page_config(
     page_title="TitansLedger - Ultimate AI Expense Tracker",
-    page_icon="💰",
+    page_icon="../Taskflow Titans Logo.png",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-if st.session_state.get("used_fallback"):
-    st.warning("⚠ Running in fallback mode (reduced accuracy)")
-else:
-    st.success("✅ AI system active (high accuracy)")
+if st.session_state.get("logged_in"):
+
+    if st.session_state.get("used_fallback"):
+        st.warning("⚠ OCR Fallback Active")
 
 # Session init
 if "logged_in" not in st.session_state:
@@ -42,14 +42,70 @@ if "logged_in" not in st.session_state:
 
 if not st.session_state["logged_in"]:
 
-    st.markdown("<h3 style='text-align:center;'>Welcome to TitansLedger</h3>", unsafe_allow_html=True)
-    tab1, tab2 = st.tabs(["🔐 Login", "📝 Sign Up"])
+    LOGIN_TITLE_CSS = """
+    <style>
 
-    with tab1:
-        login()
+    @keyframes login_shine {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+    }
 
-    with tab2:
-        signup()
+    .login-title {
+        text-align:center;
+        font-weight:900;
+        text-transform:uppercase;
+
+        background: linear-gradient(
+            90deg,
+            #6B4F00 0%,
+            #FFD700 50%,
+            #6B4F00 100%
+        );
+
+        background-size:200% auto;
+
+        -webkit-background-clip:text;
+        -webkit-text-fill-color:transparent;
+
+        animation:login_shine 5s linear infinite;
+
+        font-size:clamp(70px, 8vw, 130px);
+
+        letter-spacing:-3px;
+
+        margin-top:20px;
+        margin-bottom:30px;
+
+        filter:drop-shadow(
+            0px 10px 25px rgba(255,215,0,0.35)
+        );
+    }
+
+    </style>
+    """
+
+    st.markdown(LOGIN_TITLE_CSS, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="login-title">
+        TitansLedger
+    </div>
+    """, unsafe_allow_html=True)    
+
+    left, center, right = st.columns([1, 3, 1])
+
+    with center:
+
+        tab1, tab2 = st.tabs([
+            "🔐 Login",
+            "📝 Sign Up"
+        ])
+
+        with tab1:
+            login()
+
+        with tab2:
+            signup()
 
     st.stop()
 
@@ -63,7 +119,13 @@ with col1:
     st.markdown(f"👤 Logged in as: **{st.session_state['username']}**")
 
 with col2:
-    st.button("🚪 Logout", on_click=logout, width="stretch")
+
+    if st.button(
+        "🚪 Logout",
+        key="logout_btn",
+        use_container_width=True
+    ):
+        logout()
 
 # Set dark theme for matplotlib to match the new UI
 plt.style.use('dark_background')
@@ -112,7 +174,22 @@ uploaded_files = st.file_uploader(
     )
 
 # 🔥 SAMPLE RECEIPT BUTTON (ADD HERE)
-if st.button("📄 Try Sample Receipt"):
+st.markdown("""
+<style>
+div[data-testid="stButton"]:has(button[key="sample_btn"]) button {
+    background: linear-gradient(
+        90deg,
+        #7F1D1D,
+        #DC2626
+    ) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+if st.button(
+    "📄 Try Sample Receipt",
+    key="sample_btn"
+):
 
     sample_path = os.path.join(
         os.path.dirname(__file__),
@@ -190,9 +267,16 @@ if uploaded_files:
 
                     amount = float(result.get("amount", 0))
 
+                    # if amount <= 0:
+                    #     st.warning(f"⚠ Skipping invalid transaction: {file.name}")
+                    #     continue
                     if amount <= 0:
-                        st.warning(f"⚠ Skipping invalid transaction: {file.name}")
-                        continue
+
+                        st.warning(
+                            f"⚠ Amount not detected properly for {file.name}. Please review manually."
+                        )
+                        result["needs_review"] = True
+                        amount = 0
 
                     merchant = result.get("description", "Unknown")
                     
@@ -269,12 +353,17 @@ if uploaded_files:
                 st.success("✅ High confidence extraction")
 
             st.json(res)
+            with st.expander("📄 Raw OCR Text"):
+                st.text(res.get("raw_text", ""))
             if res.get("is_upi"):
                 st.caption("💳 UPI Transaction")
 
         st.markdown("---")
 
-        if st.button("🗑️ Clear All Data", type="primary"):
+        if st.button(
+            "🗑️ Clear All Data",
+            key="clear_btn"
+        ):
             from database.db import delete_all
             delete_all()
             st.session_state["last_results"] = []   # 🔥 ADD THIS
@@ -467,7 +556,7 @@ if not df.empty:
         else:
                 st.success("No unusual spending detected 👍")
 
-                health_score = 100
+        health_score = 100
 
         st.markdown("### 📌 Summary")
 
@@ -721,8 +810,12 @@ st.markdown("""
 <style>
 /* Main background gradient */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-    color: #F8FAFC;
+    background: linear-gradient(
+        135deg,
+        #0B0B0B 0%,
+        #121212 60%,
+        #1A1A1A 100%
+    );
 }
             
 /* Navbar buttons fix */
@@ -767,7 +860,7 @@ h1, h2, h3, h4, h5, h6, p, span, div {
 
 /* Metric Value */
 [data-testid="stMetricValue"] {
-    color: #38BDF8 !important;
+    color: #FBBF24 !important;
     font-size: 2.2rem;
     font-weight: 700;
     text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
@@ -775,7 +868,11 @@ h1, h2, h3, h4, h5, h6, p, span, div {
 
 /* Primary Buttons */
 .stButton > button {
-    background: linear-gradient(90deg, #3B82F6 0%, #8B5CF6 100%) !important;
+    background: linear-gradient(
+        90deg,
+        #B8860B 0%,
+        #FBBF24 100%
+    ) !important;
     color: white !important;
     border: none !important;
     border-radius: 8px !important;
@@ -837,6 +934,15 @@ hr {
     margin-bottom: 8px;
 }
             
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 0rem;
+}
+
+section.main > div {
+    padding-top: 0rem;
+}
+            
 @keyframes shine {
     0% { background-position: -200% center; }
     100% { background-position: 200% center; }
@@ -851,9 +957,9 @@ hr {
     text-transform: uppercase;
 
     background: linear-gradient(to right,
-        #434343 0%,
-        #ffffff 50%,
-        #434343 100%);
+        #6B4F00 0%,
+        #FFD700 50%,
+        #6B4F00 100%);
     
     background-size: 200% auto;
     -webkit-background-clip: text;
@@ -871,6 +977,7 @@ hr {
     letter-spacing: 0.02em;
     transition: 0.3s ease;
 }
+
 </style>
 
 """, unsafe_allow_html=True)
