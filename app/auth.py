@@ -23,36 +23,47 @@ def save_users(users):
 
 # LOGIN FUNCTION
 def login():
-    st.markdown("""
+
+        st.markdown("""
         <div class="login-card">
-            <h2 style="
-                color:#FFD700;
-                font-size:2rem;
-                font-weight:800;
-                ">🔐 Welcome Back</h2>
-            <p style='color:#94A3B8;'>
+            <div class="login-heading">
+                🔐 Welcome Back
+            </div>
+            <div class="login-subtitle">
                 Sign in to access your financial dashboard
-            </p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+        username = st.text_input(
+            "Username",
+            key="login_username"
+        )
 
-    if st.button("Login"):
+        password = st.text_input(
+            "Password",
+            type="password",
+            key="login_password"
+        )
 
-        with st.spinner("🔐 Authenticating..."):
-            time.sleep(1)  # small delay for UX
+        if st.button(
+            "Login",
+            key="login_btn",
+            use_container_width=True
+        ):
 
-            users = load_users()
+            with st.spinner("🔐 Authenticating..."):
+                time.sleep(1)
 
-            if username in users and users[username] == password:
-                st.session_state["logged_in"] = True
-                st.session_state["username"] = username
-                st.success("Login successful ✅")
-                st.rerun()
-            else:
-                st.error("Invalid username or password ❌")
+                users = load_users()
+
+                if username in users and users[username] == password:
+                    st.session_state["logged_in"] = True
+                    st.session_state["username"] = username
+                    st.rerun()
+
+                else:
+                    st.error("Invalid username or password")
 
 
 # SIGNUP FUNCTION (IMPORTANT ADD)
@@ -92,42 +103,3 @@ def logout():
 
     st.rerun()
 
-st.markdown("""
-<style>
-    .login-card{
-        background: linear-gradient(
-            145deg,
-            rgba(30,30,30,0.95),
-            rgba(15,15,15,0.95)
-        );
-
-        backdrop-filter: blur(20px);
-
-        border: 1px solid rgba(255,215,0,0.25);
-
-        border-radius: 24px;
-
-        padding: 30px;
-
-        text-align: center;
-
-        margin-bottom: 20px;
-
-        box-shadow:
-            0 0 30px rgba(255,215,0,0.08),
-            0 8px 30px rgba(0,0,0,0.4);
-    }
-            
-    .stTextInput input {
-        background-color: #111111 !important;
-        border: 1px solid rgba(255,215,0,0.25) !important;
-        color: white !important;
-        border-radius: 10px !important;
-    }
-
-    .stTextInput input:focus {
-        border-color: #FFD700 !important;
-        box-shadow: 0 0 10px rgba(255,215,0,0.4) !important;
-    }
-</style>
-""", unsafe_allow_html=True)
