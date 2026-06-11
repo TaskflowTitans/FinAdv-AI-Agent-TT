@@ -51,12 +51,12 @@ if not st.session_state["logged_in"]:
         100% { background-position: 200% center; }
     }
 
-    .login-title {
+    .login-title{
         text-align:center;
         font-weight:900;
         text-transform:uppercase;
 
-        background: linear-gradient(
+        background:linear-gradient(
             90deg,
             #6B4F00 0%,
             #FFD700 50%,
@@ -70,16 +70,101 @@ if not st.session_state["logged_in"]:
 
         animation:login_shine 5s linear infinite;
 
-        font-size:clamp(70px, 8vw, 130px);
+        font-size:clamp(70px,8vw,130px);
 
-        letter-spacing:-3px;
-
-        margin-top:20px;
         margin-bottom:30px;
+    }
 
-        filter:drop-shadow(
-            0px 10px 25px rgba(255,215,0,0.35)
+    .login-wrapper{
+        max-width:650px;
+        margin:auto;
+    }
+
+    .login-card{
+
+        background:linear-gradient(
+            145deg,
+            rgba(20,20,20,0.98),
+            rgba(8,8,8,0.98)
         );
+
+        border:2px solid #FFD700;
+
+        border-radius:24px;
+
+        padding:40px;
+
+        text-align:center;
+
+        margin-bottom:25px;
+
+        box-shadow:
+            0 0 25px rgba(255,215,0,0.45),
+            0 0 80px rgba(255,215,0,0.20);
+    }
+
+    .login-heading{
+        color:#FFD700 !important;
+        font-size:2.3rem !important;
+        font-weight:900 !important;
+        white-space:nowrap !important;
+    }
+
+    .login-subtitle{
+        color:#94A3B8 !important;
+        font-size:1.1rem !important;
+    }
+
+    /* Login inputs */
+
+    [data-testid="stTextInput"] input{
+
+        background:rgba(15,15,15,0.95) !important;
+
+        border:1px solid rgba(255,215,0,0.45) !important;
+
+        border-radius:12px !important;
+
+        color:white !important;
+    }
+
+    [data-testid="stTextInput"] input:focus{
+
+        border:2px solid #FFD700 !important;
+
+        box-shadow:
+            0 0 12px rgba(255,215,0,0.4) !important;
+    }
+    
+    button[data-baseweb="tab"]{
+        color:#FFD700 !important;
+        font-weight:700 !important;
+        justify-content:center !important;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"]{
+        border-bottom:3px solid #FFD700 !important;
+    }
+
+    div[data-testid="stTabs"]{
+        display:flex !important;
+        justify-content:center !important;
+    }
+
+    div[data-testid="stButton"] button {
+        background: linear-gradient(
+            90deg,
+            #B8860B,
+            #FFD700
+        ) !important;
+
+        color: #000 !important;
+        border: none !important;
+
+        font-weight: 800 !important;
+
+        box-shadow:
+            0 0 15px rgba(255,215,0,.35) !important;
     }
 
     </style>
@@ -93,20 +178,20 @@ if not st.session_state["logged_in"]:
     </div>
     """, unsafe_allow_html=True)    
 
-    left, center, right = st.columns([1, 3, 1])
+    st.markdown("<div class='login-wrapper'>", unsafe_allow_html=True)
 
-    with center:
+    tab1, tab2 = st.tabs([
+        "🔐 Login",
+        "📝 Sign Up"
+    ])
 
-        tab1, tab2 = st.tabs([
-            "🔐 Login",
-            "📝 Sign Up"
-        ])
+    with tab1:
+        login()
 
-        with tab1:
-            login()
+    with tab2:
+        signup()
 
-        with tab2:
-            signup()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.stop()
 
@@ -309,8 +394,23 @@ if uploaded_files:
                         "amount": amount,
                         "category": categorize(merchant),
                         "date": result.get("date") or str(datetime.today().date()),
-                        "description": description
+                        "description": description,
+
+                        "sender": result.get("sender"),
+                        "transaction_id": result.get("transaction_id"),
+                        "upi_id": result.get("upi_id"),
+                        "receipt_type": result.get("receipt_type"),
+                        "confidence_score": result.get("confidence_score", 0),
+
+                        "merchant": merchant
                     }
+
+                    formatted_data["sender"] = result.get("sender")
+                    formatted_data["transaction_id"] = result.get("transaction_id")
+                    formatted_data["upi_id"] = result.get("upi_id")
+                    formatted_data["receipt_type"] = result.get("receipt_type")
+                    formatted_data["confidence_score"] = result.get("confidence_score")
+                    formatted_data["merchant"] = merchant
 
                     all_results.append(formatted_data)
 
@@ -408,7 +508,14 @@ if st.session_state.get("pending_transactions"):
                 "amount": float(st.session_state[f"amount_{i}"]),
                 "category": st.session_state[f"category_{i}"],
                 "date": st.session_state[f"date_{i}"],
-                "description": st.session_state[f"description_{i}"]
+                "description": st.session_state[f"description_{i}"],
+
+                "sender": txn.get("sender"),
+                "transaction_id": txn.get("transaction_id"),
+                "upi_id": txn.get("upi_id"),
+                "receipt_type": txn.get("receipt_type"),
+                "confidence_score": txn.get("confidence_score"),
+                "merchant": txn.get("merchant")
             }
 
             insert_transaction(final_txn)
@@ -947,6 +1054,27 @@ section.main > div {
 .titans-title:hover {
     letter-spacing: 0.02em;
     transition: 0.3s ease;
+}
+        
+button[aria-label*="password"]{
+    background:#FFD700 !important;
+    border-radius:12px !important;
+}
+
+[data-testid="stTextInput"] button{
+    background:#FFD700 !important;
+    border:none !important;
+}
+            
+div[data-testid="stButton"] button{
+    background:linear-gradient(
+        90deg,
+        #B8860B,
+        #FFD700
+    ) !important;
+
+    color:black !important;
+    font-weight:800 !important;
 }
 
 </style>
