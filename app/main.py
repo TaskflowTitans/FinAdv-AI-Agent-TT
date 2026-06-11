@@ -9,7 +9,6 @@ import json
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-from database.db import init_db, insert_transaction, get_all_transactions
 import plotly.express as px
 from auth import login, signup, logout
 import tempfile
@@ -22,6 +21,14 @@ from agents.advisor_agent import AdvisorAgent
 from tools.financial_advisor import generate_financial_advice
 extraction_agent = ExtractionAgent()
 advisor_agent = AdvisorAgent()
+from database.db import (
+    init_db,
+    insert_transaction,
+    get_all_transactions,
+    is_duplicate,
+    generate_image_hash,
+    hash_exists
+)
 
 # PAGE CONFIG
 st.set_page_config(
@@ -333,8 +340,27 @@ if uploaded_files:
                     if i > 0:
                         time.sleep(1)
 
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-                        tmp.write(file.read())
+                    file_bytes = file.read()
+
+                    image_hash = generate_image_hash(
+                        file_bytes
+                    )
+
+                    if hash_exists(image_hash):
+
+                        st.warning(
+                            f"⚠ {file.name} already processed before. Skipping OCR."
+                        )
+
+                        continue
+
+                    with tempfile.NamedTemporaryFile(
+                        delete=False,
+                        suffix=".png"
+                    ) as tmp:
+
+                        tmp.write(file_bytes)
+
                         tmp_path = tmp.name
 
                     # result = extract_with_tesseract(tmp_path)
@@ -403,7 +429,8 @@ if uploaded_files:
                         "receipt_type": result.get("receipt_type"),
                         "confidence_score": result.get("confidence_score", 0),
 
-                        "merchant": merchant
+                        "merchant": merchant,
+                        "image_hash": image_hash,
                     }
 
                     formatted_data["sender"] = result.get("sender")
@@ -503,6 +530,9 @@ if st.session_state.get("pending_transactions"):
     # ✅ Confirm button
     if st.button("✅ Confirm & Save All", use_container_width=True):
 
+        saved_count = 0
+        duplicate_count = 0
+
         for i, txn in enumerate(st.session_state["pending_transactions"]):
 
             final_txn = {
@@ -518,12 +548,33 @@ if st.session_state.get("pending_transactions"):
                 "upi_id": txn.get("upi_id"),
                 "receipt_type": txn.get("receipt_type"),
                 "confidence_score": txn.get("confidence_score"),
-                "merchant": txn.get("merchant")
+                "merchant": txn.get("merchant"),
+                "image_hash": txn.get("image_hash"),
             }
 
-            insert_transaction(final_txn)
+            if is_duplicate(final_txn):
 
-        st.success("✅ Transactions saved successfully!")
+                duplicate_count += 1
+
+                st.warning(
+                    f"⚠ Duplicate transaction detected "
+                    f"(Txn {i+1})"
+                )
+
+            else:
+
+                insert_transaction(final_txn)
+
+                saved_count += 1
+
+        st.success(
+            f"✅ Saved {saved_count} transaction(s)"
+        )
+
+        if duplicate_count > 0:
+            st.warning(
+                f"⚠ Skipped {duplicate_count} duplicate(s)"
+            )
 
         # clear pending
         del st.session_state["pending_transactions"]
