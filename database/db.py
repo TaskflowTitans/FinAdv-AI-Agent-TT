@@ -1,11 +1,37 @@
 import sqlite3
 import pandas as pd
+import hashlib
 
 DB_NAME = "expenses.db"
 
 def connect():
     return sqlite3.connect(DB_NAME, check_same_thread=False)
 
+def generate_image_hash(file_bytes):
+
+    return hashlib.md5(
+        file_bytes
+    ).hexdigest()
+
+def hash_exists(image_hash):
+
+    conn = connect()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+        FROM transactions
+        WHERE image_hash = ?
+        """,
+        (image_hash,)
+    )
+
+    count = cursor.fetchone()[0]
+
+    conn.close()
+
+    return count > 0
 
 def init_db():
     conn = connect()
@@ -32,7 +58,8 @@ def init_db():
 
         receipt_type TEXT,
 
-        confidence_score REAL
+        confidence_score REAL,
+        image_hash TEXT
     )
     """)
 
@@ -56,9 +83,10 @@ def insert_transaction(data):
         bank_name,
         transaction_id,
         receipt_type,
-        confidence_score
+        confidence_score,
+        image_hash
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         data.get("amount"),
         data.get("category"),
@@ -70,7 +98,8 @@ def insert_transaction(data):
         data.get("bank_name"),
         data.get("transaction_id"),
         data.get("receipt_type"),
-        data.get("confidence_score")
+        data.get("confidence_score"),
+        data.get("image_hash")
     ))
 
     conn.commit()
@@ -94,3 +123,42 @@ def delete_all():
 
     conn.commit()
     conn.close()
+
+def is_duplicate(transaction):
+
+    conn = connect()
+    cursor = conn.cursor()
+
+    txn_id = transaction.get("transaction_id")
+
+    if txn_id:
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM transactions
+            WHERE transaction_id = ?
+        """, (txn_id,))
+
+        count = cursor.fetchone()[0]
+
+        conn.close()
+
+        return count > 0
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM transactions
+        WHERE amount = ?
+        AND date = ?
+        AND description = ?
+    """, (
+        transaction.get("amount"),
+        transaction.get("date"),
+        transaction.get("description")
+    ))
+
+    count = cursor.fetchone()[0]
+
+    conn.close()
+
+    return count > 0
